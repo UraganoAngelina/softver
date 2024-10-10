@@ -13,6 +13,7 @@ use crate::ast::boolean::Great;
 use crate::ast::boolean::GreatEqual;
 use crate::ast::boolean::Less;
 use crate::ast::boolean::LessEqual;
+use crate::ast::boolean::Not;
 use crate::ast::boolean::Or;
 use crate::ast::statement::Skip;
 use crate::ast::statement::Statement;
@@ -352,14 +353,20 @@ pub fn parse_arithmetic_subexpression(tok_vec: &mut AnyVec, index: &mut usize,) 
 
     // Creo il vettore Any contenente solo la sottoespressione da parsare
     let mut sub_any_vec = AnyVec { nodes: sub_tok_vec };
-
+    let mut  k=0;
+    println!("vector arithmetic subexpression: ");
+    while k<sub_any_vec.nodes.len()
+    {
+        println!("{:?}" , sub_any_vec.nodes[k]);
+        k+=1;
+    }
     // Richiama il parsing della sottoespressione
     let mut sub_index = 0; // Indice locale per la sottoespressione
     parse_arithmetic_expression(&mut sub_any_vec, &mut sub_index);
 
     // Controlla il risultato del parsing
     if let Some(Any::ArithmeticExpression(expr)) = sub_any_vec.nodes.pop() {
-        //println!("parsed subexpression {:?}", expr);
+        println!("parsed subexpression {:?}", expr);
         expr // Ritorna l'espressione parsata
     } else {
         panic!("Errore di parsing: expected ArithmeticExpression in sottoespressione.");
@@ -403,6 +410,13 @@ pub fn parse_bool_subexpression(tok_vec: &mut AnyVec, index: &mut usize,) -> Box
 
     // Creo il vettore Any contenente solo la sottoespressione da parsare
     let mut sub_any_vec = AnyVec { nodes: sub_tok_vec };
+    let mut k =0;
+    println!("vector bool subexpression: ");
+    while k<sub_any_vec.nodes.len()
+    {
+        println!("{:?}" , sub_any_vec.nodes[k]);
+        k+=1;
+    }
 
     // Richiama il parsing della sottoespressione
     let mut sub_index = 0; // Indice locale per la sottoespressione
@@ -410,7 +424,7 @@ pub fn parse_bool_subexpression(tok_vec: &mut AnyVec, index: &mut usize,) -> Box
 
     // Controlla il risultato del parsing
     if let Some(Any::BooleanExpression(expr)) = sub_any_vec.nodes.pop() {
-        //println!("parsed subexpression {:?}", expr);
+        println!("parsed subexpression {:?}", expr);
         expr // Ritorna l'espressione parsata
     } else {
         panic!("Errore di parsing: expected ArithmeticExpression in sottoespressione.");
@@ -945,26 +959,51 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
     }
 }
 
-pub fn parse_arithmetic_unop (tok_vec: &mut AnyVec, index: &mut usize){
-    while *index < tok_vec.nodes.len(){
-        if let Some(Any::Token(token)) = tok_vec.nodes.get(*index){
+pub fn parse_arithmetic_unop(tok_vec: &mut AnyVec, index: &mut usize) {
+    while *index < tok_vec.nodes.len() {
+        if let Some(Any::Token(token)) = tok_vec.nodes.get(*index) {
             match token.token_ty {
                 TokenType::Minus => {
-                    if *index >= tok_vec.nodes.len() {
-                        panic!("Errore di parsing: operando destro mancante per la negazione unaria.");
+                    // Assicurati che non ci sia un operando a sinistra
+                    if *index > 0 {
+                        // Controlla cosa c'è prima del segno meno
+                        if let Some(node) = tok_vec.nodes.get(*index - 1) {
+                            match node {
+                                Any::ArithmeticExpression(_) => {
+                                    // C'è un'espressione a sinistra, quindi il meno è binario
+                                    // Puoi decidere di gestirlo come operatore binario
+                                    return; // O interrompi qui, a seconda del caso
+                                }
+                                Any::Token(previous_token) => {
+                                    // Controlla se il token precedente è un token che rappresenta
+                                    // un operatore binario o un delimitatore (es. parentesi)
+                                    match previous_token.token_ty {
+                                        TokenType::Plus | TokenType::Minus | TokenType::Multiply |
+                                        TokenType::Divide | TokenType::Bra | TokenType::Assign => {
+                                            // Token valido per un operatore unario
+                                        }
+                                        _ => {
+                                            // Se trovi un token non valido per un meno unario, interrompi
+                                            panic!("Errore di parsing: operando sinistro non valido per il '-' unario.");
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
                     }
-                    // TODO assicurarmi che a sx non ci sia operando sinistro
-                    // parsare ciò che ho a dx 
-                    *index+=1;
+
+                    // Se non ci sono operandi a sinistra o il token precedente è valido  
+                    //rimuovo il token e continuo
+                   tok_vec.nodes.remove(*index);
+
                     let right = if let Some(node) = tok_vec.nodes.get(*index) {
                         match node {
                             Any::Token(token) => {
                                 if let TokenType::Bra = token.token_ty {
                                     println!("parsing subexpression");
-                                    //println!("parsed by recursion right expression {:?}", parse_subexpression(tok_vec, index));
                                     parse_arithmetic_subexpression(tok_vec, index)
                                 } else {
-                                    // Token is not a parenthesis, check if it's a valid arithmetic expression
                                     let right_node = tok_vec.nodes.remove(*index);
                                     println!("parsed right operand {:?}", right_node);
                                     match right_node {
@@ -977,35 +1016,105 @@ pub fn parse_arithmetic_unop (tok_vec: &mut AnyVec, index: &mut usize){
                                 let right_node = tok_vec.nodes.remove(*index);
                                 println!("parsed right operand {:?}", right_node);
                                 match right_node {
-                                        Any::ArithmeticExpression(expr) => expr,
-                                        _ => panic!("Errore di parsing: attesa espressione aritmetica a destra del '-' unario."),
-                                    }
+                                    Any::ArithmeticExpression(expr) => expr,
+                                    _ => panic!("Errore di parsing: attesa espressione aritmetica a destra del '-' unario."),
+                                }
                             }
-                            _ => {
-                                panic!("Errore di parsing: nodo non riconosciuto a destra del '-' unario.")
-                            }
+                            _ => panic!("Errore di parsing: nodo non riconosciuto a destra del '-' unario."),
                         }
-                    }else {
+                    } else {
                         panic!("Errore di parsing: nessun token trovato a destra del '-' unario.");
                     };
 
-                    let min_expr = Uminus {right};
-                    tok_vec.nodes.insert(*index-1, Any::ArithmeticExpression(Box::new(min_expr)));
-
+                    let min_expr = Uminus { right };
+                    tok_vec.nodes.insert(*index - 1, Any::ArithmeticExpression(Box::new(min_expr)));
                 }
-                _ => { }
-
+                _ => {}
             }
         }
+        *index += 1;
     }
-    *index += 1;
 }
 
+pub fn parse_bool_unop(tok_vec: &mut AnyVec, index: &mut usize) {
+    while *index < tok_vec.nodes.len() {
+        if let Some(Any::Token(token)) = tok_vec.nodes.get(*index) {
+            match token.token_ty {
+                TokenType::Not => {
+                    // Assicurati che non ci sia un operando a sinistra
+                    if *index > 0 {
+                        // Controlla cosa c'è prima del segno meno
+                        if let Some(node) = tok_vec.nodes.get(*index - 1) {
+                            match node {
+                                Any::BooleanExpression(_) => {
+                                    // C'è un'espressione a sinistra, quindi il meno è binario
+                                    // Puoi decidere di gestirlo come operatore binario
+                                    return; // interrompo gestione delegata a parse_bool_expression
+                                }
+                                Any::Token(previous_token) => {
+                                    // Controlla se il token precedente è un token che rappresenta
+                                    // un operatore binario o un delimitatore (es. parentesi)
+                                    match previous_token.token_ty {
+                                        TokenType::And| TokenType::Or | TokenType::Bra | TokenType::Assign => {
+                                            // Token valido per un operatore unario
+                                        }
+                                        _ => {
+                                            // Se trovi un token non valido per un meno unario, interrompi
+                                            panic!("Errore di parsing: operando sinistro non valido per il '-' unario.");
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    // Se non ci sono operandi a sinistra o il token precedente è valido  
+                    //rimuovo il token e continuo
+                   tok_vec.nodes.remove(*index);
+
+                    let expression = if let Some(node) = tok_vec.nodes.get(*index) {
+                        match node {
+                            Any::Token(token) => {
+                                if let TokenType::Bra = token.token_ty {
+                                    println!("parsing subexpression");
+                                    parse_bool_subexpression(tok_vec, index)
+                                } else {
+                                    let right_node = tok_vec.nodes.remove(*index);
+                                    println!("parsed right operand {:?}", right_node);
+                                    match right_node {
+                                        Any::BooleanExpression(expr) => expr,
+                                        _ => panic!("Errore di parsing: attesa espressione aritmetica a destra del '-' unario."),
+                                    }
+                                }
+                            }
+                            Any::BooleanExpression(_expr) => {
+                                let right_node = tok_vec.nodes.remove(*index);
+                                println!("parsed right operand {:?}", right_node);
+                                match right_node {
+                                    Any::BooleanExpression(expr) => expr,
+                                    _ => panic!("Errore di parsing: attesa espressione aritmetica a destra del '-' unario."),
+                                }
+                            }
+                            _ => panic!("Errore di parsing: nodo non riconosciuto a destra del '-' unario."),
+                        }
+                    } else {
+                        panic!("Errore di parsing: nessun token trovato a destra del '-' unario.");
+                    };
+
+                    let min_expr = Not { expression };
+                    tok_vec.nodes.insert(*index - 1, Any::BooleanExpression(Box::new(min_expr)));
+                }
+                _ => {}
+            }
+        }
+        *index += 1;
+    }
+}
 
 
 pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
     // RICERCA UNARY OPERATOR
-    parse_arithmetic_unop(tok_vec , index);
     //println!("index:= {}", index);
     while *index < tok_vec.nodes.len() {
         // Controlla se il nodo attuale è un token
@@ -1180,13 +1289,13 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                         ),
                     };
 
-                    //println!("printing the token vector after the left elimination");
-                    //let mut j = 0;
-                    //while j < tok_vec.nodes.len()
-                    //{
-                    //  println!("{:?}", tok_vec.nodes[j]);
-                    //   j=j+1;
-                    //}
+                    println!("printing the token vector after the left elimination");
+                    let mut j = 0;
+                    while j < tok_vec.nodes.len()
+                    {
+                     println!("{:?}", tok_vec.nodes[j]);
+                      j=j+1;
+                    }
 
                     // Dopo il `-`, cerca l'operando destro
                     if *index >= tok_vec.nodes.len() {
@@ -1250,10 +1359,13 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 }
 
 
-//TODO GENERAL: IMPLEMENTA RICERCA PER UNARY OPERATORS, POI PARSE STATEMENT, POI EVALUATION DELL'AST
-pub fn parse(program: String, initial_state: String) {
+//TODO GENERAL: IMPLEMENTA PARSE STATEMENT, POI EVALUATION DELL'AST
+pub fn analyze(program: String, initial_state: String) {
     //cleaning the input from whitespaces
     let cleanp = program.trim();
+    //----------------------------------------------------------------------------------------------------------------------------------------------------
+    //LEXING SECTION
+    //----------------------------------------------------------------------------------------------------------------------------------------------------
 
     //let the lexer work (string->AnyVec)
     let tokens = Lexer::tokenize(cleanp.to_owned());
@@ -1266,40 +1378,72 @@ pub fn parse(program: String, initial_state: String) {
     //print!("tokenized program code: {}", pre_ast);
 
     //let's build the ast! (AnyVec->Statement)
+    // building the any vector that contains tokens and expressions 
     let mut any_vec = AnyVec::new();
     for token in tokenized_program.tokens {
         any_vec.push_token(token);
     }
 
     let mut index = 0 as usize;
-    // literals
+    //----------------------------------------------------------------------------------------------------------------------------------------------------
+    //PARSING SECTION
+    //----------------------------------------------------------------------------------------------------------------------------------------------------
+
     parse_atomic(&mut any_vec, &mut index);
     index = 0;
 
     println!(" atomic terms parsed");
-    //let mut j = 0;
-    //while j < any_vec.nodes.len()
-    //{
+    let mut j = 0;
+    while j < any_vec.nodes.len()
+    {
+       println!("{:?}", any_vec.nodes[j]);
+       j=j+1;
+    }
+    parse_arithmetic_unop(&mut any_vec , &mut index);
+    index = 0;
+    parse_bool_unop(& mut any_vec, &mut index);
+    index=0;
+    // println!(" arithmetic unary expressions parsed: ");
+    // let mut j = 0;
+    // while j < any_vec.nodes.len()
+    // {
     //    println!("{:?}", any_vec.nodes[j]);
     //    j=j+1;
-    //}
-
+    // }
     //arithmetic expressions
     parse_arithmetic_expression(&mut any_vec, &mut index);
     index = 0;
+    println!(" arithmetic expressions parsed: ");
+    let mut j = 0;
+    while j < any_vec.nodes.len()
+    {
+       println!("{:?}", any_vec.nodes[j]);
+       j=j+1;
+    }
     //boolean expressions
     parse_bool_expression(&mut any_vec, &mut index);
     index = 0;
+   // println!(" bool expressions parsed: ");
+    //let mut j = 0;
+    // while j < any_vec.nodes.len()
+    // {
+    //    println!("{:?}", any_vec.nodes[j]);
+    //    j=j+1;
+    // }
     //statements
 
-    println!(" expressions parsed");
-    let mut i = 0;
-    while i < any_vec.nodes.len() {
-        println!("{:?}", any_vec.nodes[i]);
-        i = i + 1;
-    }
+    // println!(" expressions parsed");
+    // let mut i = 0;
+    // while i < any_vec.nodes.len() {
+    //     println!("{:?}", any_vec.nodes[i]);
+    //     i = i + 1;
+    // }
 
     //statements
+
+    //----------------------------------------------------------------------------------------------------------------------------------------------------
+    //EVALUATING SECTION
+    //----------------------------------------------------------------------------------------------------------------------------------------------------
 
     // evaluate the final statement
     //occhio al caso angeli degli spazi cancellati: 10- -10

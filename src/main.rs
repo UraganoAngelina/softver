@@ -33,7 +33,7 @@ fn main() {
     let initial_state = fs::read_to_string(state_file_path).expect("Should have been able to read the state");
 
     //parse the program
-    parser::parse(contents, initial_state);
+    parser::analyze(contents, initial_state);
     
     //evaluate the program
 
