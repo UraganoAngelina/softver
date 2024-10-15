@@ -15,8 +15,12 @@ use crate::ast::boolean::Less;
 use crate::ast::boolean::LessEqual;
 use crate::ast::boolean::Not;
 use crate::ast::boolean::Or;
+use crate::ast::statement::Assign;
+use crate::ast::statement::Concat;
+use crate::ast::statement::IfThenElse;
 use crate::ast::statement::Skip;
 use crate::ast::statement::Statement;
+use crate::ast::statement::While;
 use crate::ast::State;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
@@ -138,6 +142,10 @@ impl Any {
         } else {
             None
         }
+    }
+    //Funzione per ritornare un riferimento ad Any
+    pub fn as_any(&self) -> &Self {
+        self
     }
 }
 pub struct AnyVec {
@@ -1112,9 +1120,7 @@ pub fn parse_bool_unop(tok_vec: &mut AnyVec, index: &mut usize) {
     }
 }
 
-
 pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
-    // RICERCA UNARY OPERATOR
     //println!("index:= {}", index);
     while *index < tok_vec.nodes.len() {
         // Controlla se il nodo attuale è un token
@@ -1358,8 +1364,83 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
     }
 }
 
+pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
+    while *index < any_vec.nodes.len() {
+        if let Some(Any::Token(token)) = any_vec.nodes.get(*index) {
+            match token.token_ty {
+                // Gestione dell'assegnazione: var := arith_expr
+                TokenType::Assign => {
+                    // Prima dell'assegnamento deve esserci una variabile
+                    if *index == 0 {
+                        panic!("Errore di parsing: variabile mancante prima dell'assegnamento.");
+                    }
+                    let var_node = any_vec.nodes.remove(*index - 1);
+                    let var = match var_node.as_arithmetic_expr() {
+                        Some(expr) => {
+                            if let Some(variable) = expr.as_variable() {
+                                variable
+                            } else {
+                                panic!("Errore di parsing: attesa una variabile prima di ':='.");
+                            }
+                        }
+                        None => panic!("Errore di parsing: attesa una variabile prima di ':='."),
+                    };
 
-//TODO GENERAL: IMPLEMENTA PARSE STATEMENT, POI EVALUATION DELL'AST
+                    // Dopo l'assegnamento deve esserci un'espressione aritmetica
+                    *index += 1;
+                    let expr_node = any_vec.nodes.remove(*index);
+                    let expr = match expr_node.as_arithmetic_expr(){
+                        Some(arith_expression) => arith_expression,
+                        None => panic!("Errore di parsing: attesa un'espressione aritmetica a destra di ':='."),
+                    };
+
+                    let assignment_stmt = Assign { var_name: var.value.clone(), expr: expr.clone_box() };
+                    any_vec.nodes.insert(
+                        *index - 1,
+                        Any::Statement(Box::new(assignment_stmt)),
+                    );
+                    //any_vec.nodes.remove(*index);
+                }
+
+                // Gestione della concatenazione: s1 ; s2 (s1 e s2 sono statements)
+                TokenType::Semicolon => {
+                    // Prima del `;` si trova il primo statement (s1)
+                    if *index == 0 {
+                        panic!("Errore di parsing: primo statement mancante prima di ';'.");
+                    }
+                    let s1_node = any_vec.nodes.remove(*index - 1);
+                    let s1 = match s1_node.as_statement() {
+                        Some(stmt) => stmt,
+                        None => panic!("Errore di parsing: atteso uno statement prima di ';'."),
+                    };
+
+                    // Dopo il `;`, cerca il secondo statement (s2)
+                    *index += 1;
+                    let s2_node = any_vec.nodes.remove(*index);
+                    let s2 = match s2_node.as_statement() {
+                        Some(stmt) => stmt,
+                        None => panic!("Errore di parsing: atteso uno statement dopo ';'."),
+                    };
+
+                    let concat_stmt = Concat { first: s1.clone_box(), second: s2.clone_box() };
+                    any_vec.nodes.insert(
+                        *index - 1,
+                        Any::Statement(Box::new(concat_stmt)),
+                    );
+
+                    // Rimuove il token di concatenazione
+                    //any_vec.nodes.remove(*index);
+                }
+                _ => {}
+            }
+        }
+
+        *index += 1;
+    }
+}
+
+
+//TODO GENERAL: IMPLEMENTA PARSE IF WHILE FOR REPEAT, POI EVALUATION DELL'AST
 pub fn analyze(program: String, initial_state: String) {
     //cleaning the input from whitespaces
     let cleanp = program.trim();
@@ -1431,13 +1512,7 @@ pub fn analyze(program: String, initial_state: String) {
     //    j=j+1;
     // }
     //statements
-
-    // println!(" expressions parsed");
-    // let mut i = 0;
-    // while i < any_vec.nodes.len() {
-    //     println!("{:?}", any_vec.nodes[i]);
-    //     i = i + 1;
-    // }
+    parse_statement(&mut any_vec, &mut index)
 
     //statements
 
@@ -1448,3 +1523,5 @@ pub fn analyze(program: String, initial_state: String) {
     // evaluate the final statement
     //occhio al caso angeli degli spazi cancellati: 10- -10
 }
+
+
