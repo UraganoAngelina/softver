@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum TokenType {
     // Numeri
     Number(i32),
