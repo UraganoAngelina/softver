@@ -142,3 +142,24 @@ impl Statement for For {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct RepeatUntil{
+    pub body: Box<dyn Statement>,
+    pub guard: Box<dyn BooleanExpression>,
+}
+impl Statement for RepeatUntil{
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn clone_box(&self) -> Box<dyn Statement> {
+        Box::new(RepeatUntil{
+            body: self.body.clone_box(),
+            guard: self.guard.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: &mut State) {
+        todo!()
+    }
+
+}
