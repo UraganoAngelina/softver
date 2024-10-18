@@ -15,16 +15,8 @@ use ast::statement::While;
 fn main() {
     let mut state = ast::State::new();
     
-    let stmt = Assign {
-        var_name: "x".to_string(),
-        expr: Box::new(Add {
-            left: Box::new(Numeral(5)),
-            right: Box::new(Numeral(3)),
-        }),
-    };
-
     //test file path
-    let program_file_path = Path::new("/home/alberto/Desktop/softver/src/test/pio");
+    let program_file_path = Path::new("/home/alberto/Desktop/softver/src/test/factorial");
     let state_file_path = Path::new("/home/alberto/Desktop/softver/src/test/factorialState");
     
     //read from the file
