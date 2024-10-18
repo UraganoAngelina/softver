@@ -17,6 +17,7 @@ use crate::ast::boolean::Not;
 use crate::ast::boolean::Or;
 use crate::ast::statement::Assign;
 use crate::ast::statement::Concat;
+use crate::ast::statement::For;
 use crate::ast::statement::IfThenElse;
 use crate::ast::statement::Skip;
 use crate::ast::statement::Statement;
@@ -147,6 +148,16 @@ impl Any {
     //Funzione per ritornare un riferimento ad Any
     pub fn as_any(&self) -> &Self {
         self
+    }
+
+    pub fn as_assign(&self) -> Option<&Assign> {
+        if let Any::Statement(stmt) = self {
+            // Tenta un cast manuale al tipo Assign
+            if let Some(assign_stmt) = stmt.as_any().downcast_ref::<Assign>() {
+                return Some(assign_stmt);
+            }
+        }
+        None
     }
 }
 pub struct AnyVec {
@@ -1424,7 +1435,6 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         .insert(*index - 1, Any::Statement(Box::new(assignment_stmt)));
                     any_vec.nodes.remove(*index);
                 }
-
                 // Gestione della concatenazione: s1 ; s2 (s1 e s2 sono statements)
                 TokenType::Semicolon => {
                     // Prima del `;` si trova il primo statement (s1)
@@ -1500,49 +1510,38 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         };
                         if *index < any_vec.nodes.len() {
                             *index += 1;
-                            let else_str = "skip";
-                            let else_tok = any_vec.nodes.remove(*index);
-                            let else_ = match else_tok.as_token() {
-                                Some(t) => t,
-                                None => &Token {
-                                    value: else_str.to_string(),
-                                    token_ty: (TokenType::Skip),
-                                },
-                            };
 
-                            match else_.token_ty {
-                                TokenType::Else => {
-                                    //tutto ok parso il resto
-                                    if *index < any_vec.nodes.len() {
-                                        *index += 1;
-                                        parse_statement(any_vec, index);
-                                        if let Some(Any::Statement(_)) = any_vec.nodes.get(*index) {
-                                            // Rimuovi il nodo che è stato appena parsato e fai il cast
-                                            let else_node = any_vec.nodes.remove(*index);
-                                            let else_expr = match else_node.as_statement() {
-                                                Some(stmt) => stmt,
-                                                None => panic!("Errore di parsing: atteso uno statement dopo 'else'."),
-                                            };
+                            if let Some(Any::Token(tok)) = any_vec.nodes.get(*index) {
+                                if tok.token_ty == TokenType::Else {
+                                    // Rimuove il token 'else'
+                                    any_vec.nodes.remove(*index);
 
-                                            let if_stmt = IfThenElse {
-                                                guard,
-                                                true_expr: then_expr.clone_box(),
-                                                false_expr: else_expr.clone_box(),
-                                            };
+                                    *index += 1;
+                                    parse_statement(any_vec, index);
 
-                                            any_vec.nodes.insert(
-                                                *index - 1,
-                                                Any::Statement(Box::new(if_stmt)),
-                                            );
+                                    if let Some(Any::Statement(_)) = any_vec.nodes.get(*index) {
+                                        let else_node = any_vec.nodes.remove(*index);
+                                        let else_expr = match else_node.as_statement() {
+                                            Some(stmt) => stmt,
+                                            None => panic!("Errore di parsing: atteso uno statement dopo 'else'."),
+                                        };
 
-                                            any_vec.nodes.remove(*index);
-                                        } else {
-                                            panic!("Errore di parsing: atteso uno statement dopo 'else'.")
-                                        }
+                                        let if_stmt = IfThenElse {
+                                            guard,
+                                            true_expr: then_expr.clone_box(),
+                                            false_expr: else_expr.clone_box(),
+                                        };
+
+                                        any_vec
+                                            .nodes
+                                            .insert(*index - 1, Any::Statement(Box::new(if_stmt)));
+                                    } else {
+                                        panic!(
+                                            "Errore di parsing: atteso uno statement dopo 'else'."
+                                        )
                                     }
-                                    //creare oggetto if parsando il ramo else
-                                }
-                                _ => {
+                                } else {
+                                    // Caso in cui non c'è il token else, inserisce uno statement Skip
                                     let skip_stmt = Skip;
                                     let statement_expr = Box::new(skip_stmt);
                                     let if_stmt = IfThenElse {
@@ -1551,30 +1550,228 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                                         false_expr: statement_expr,
                                     };
 
-                                    any_vec.nodes.insert(
-                                        *index - 1,
-                                        Any::Statement(Box::new(if_stmt)),
-                                    );
-
-                                    any_vec.nodes.remove(*index);
-                                    
+                                    any_vec
+                                        .nodes
+                                        .insert(*index - 1, Any::Statement(Box::new(if_stmt)));
                                 }
+                            } else {
+                                panic!("Errore di parsing: else mancante ed espressione non corretta, possibile errore di sintassi nel condizionale.");
+                            }
+                        }
+                    }
+                }
+                //Gestione del ciclo while
+                TokenType::While => {
+                    // check che guard sia una BooleanExpression
+                    *index += 1;
+                    let guard = match any_vec.nodes.get(*index) {
+                        Some(Any::BooleanExpression(expr)) => expr.clone_box(),
+                        _ => {
+                            panic!(
+                                "Errore di parsing: attesa una espressione booleana dopo 'while'."
+                            )
+                        }
+                    };
+
+                    // check che ci sia una parentesi graffa aperta '{' dopo la guardia
+                    *index += 1;
+                    let open_brace = any_vec.nodes.get(*index);
+                    match open_brace {
+                        Some(Any::Token(t)) if t.token_ty == TokenType::CBra => {
+                            // Trovata la parentesi aperta, procedi con il parsing del body
+                            *index += 1;
+                        }
+                        _ => panic!("Errore di parsing: attesa '{{' dopo la guardia."),
+                    }
+
+                    // Parsing del body finché non trovi la parentesi graffa chiusa '}'
+                    let mut body: Option<Box<dyn Statement>> = None;
+
+                    while *index < any_vec.nodes.len() {
+                        match any_vec.nodes.get(*index) {
+                            Some(Any::Token(t)) if t.token_ty == TokenType::Cket => {
+                                // Trovata la parentesi chiusa, fine del body
+                                *index += 1;
+                                break;
+                            }
+                            _ => {
+                                // Parsiamo il prossimo statement nel body
+                                parse_statement(any_vec, index);
+
+                                if let Some(Any::Statement(stmt)) = any_vec.nodes.get(*index) {
+                                    let parsed_stmt = stmt.clone_box();
+
+                                    // Se già esiste uno statement nel body, concateno i nuovi statement
+                                    body = match body {
+                                        Some(existing_body) => {
+                                            // Creazione di un nuovo `Concat` statement per concatenare
+                                            Some(Box::new(Concat {
+                                                first: existing_body,
+                                                second: parsed_stmt,
+                                            }))
+                                        }
+                                        None => Some(parsed_stmt), // Primo statement nel body
+                                    };
+                                } else {
+                                    panic!("Errore di parsing: atteso uno statement nel body del ciclo while.");
+                                }
+
+                                *index += 1;
                             }
                         }
                     }
 
-            
+                    // Check che ci sia stata una parentesi graffa chiusa '}'
+                    if let Some(Any::Token(t)) = any_vec.nodes.get(*index - 1) {
+                        if t.token_ty != TokenType::Cket {
+                            panic!("Errore di parsing: attesa '}}' per chiudere il body del ciclo while.");
+                        }
+                    }
+
+                    // Se non ci sono statement nel body, inserisci uno Skip come default
+                    let body = body.unwrap_or_else(|| Box::new(Skip));
+
+                    // Creazione dell'oggetto While
+                    let while_stmt = While { guard, body };
+
+                    // Inserimento nel vettore any_vec.nodes
+                    any_vec
+                        .nodes
+                        .insert(*index - 1, Any::Statement(Box::new(while_stmt)));
+
+                    any_vec.nodes.remove(*index);
                 }
-                TokenType::While => { todo!()}
+                //Gestione ciclo for
+                TokenType::For => {
+                    
+                    // Controlla la presenza di '(' dopo 'for'
+                    let open_paren = any_vec.nodes.get(*index);
+                    if let Some(Any::Token(t)) = open_paren {
+                        if t.token_ty != TokenType::Bra {
+                            panic!("Errore di parsing: attesa una parentesi aperta '(' dopo 'for'.");
+                        }
+                    } else {
+                        panic!("Errore di parsing: atteso un token dopo 'for'.");
+                    }
+                
+                    *index += 1;
+                
+                    // Parsing di init (deve essere uno Statement)
+                    let parsed_init = if let Some(Any::Statement(stmt)) = any_vec.nodes.get(*index) {
+                        // Cast per verificare che lo statement sia un `Assign`
+                        if let Some(assign_stmt) = stmt.as_any().downcast_ref::<Assign>() {
+                            assign_stmt.clone_box()  // Usa il clone del valore `Assign`
+                        } else {
+                            panic!("Errore di parsing: atteso un 'Assign' come prima condizione del 'for'.");
+                        }
+                    } else {
+                        panic!("Errore di parsing: atteso uno statement come prima condizione del 'for'.");
+                    };
+                
+                    // Parsing del guard (deve essere una BooleanExpression)
+                    *index += 1;
+                    let guard = match any_vec.nodes.get(*index) {
+                        Some(Any::BooleanExpression(expr)) => expr.clone_box(),
+                        _ => {
+                            panic!("Errore di parsing: attesa un' espressione booleana come seconda condizione del 'for'.");
+                        }
+                    };
+                
+                    *index += 1;
+                
+                    // Parsing di increment (deve essere uno Statement)
+                    parse_statement(any_vec, index);
+                    let parsed_increment = if let Some(Any::Statement(stmt)) = any_vec.nodes.get(*index) {
+                        // Cast per verificare che lo statement sia un `Assign`
+                        if let Some(assign_stmt) = stmt.as_any().downcast_ref::<Assign>() {
+                            assign_stmt.clone_box()  // Usa il clone del valore `Assign`
+                        } else {
+                            panic!("Errore di parsing: atteso un 'Assign' come terza condizione del 'for'.");
+                        }
+                    } else {
+                        panic!("Errore di parsing: atteso uno statement come terza condizione del 'for'.");
+                    };
+                
+                    // Controlla la presenza di ')' dopo l'increment
+                    *index += 1;
+                    let close_paren = any_vec.nodes.get(*index);
+                    if let Some(Any::Token(t)) = close_paren {
+                        if t.token_ty != TokenType::Ket {
+                            panic!("Errore di parsing: attesa una parentesi chiusa ')' dopo l'increment.");
+                        }
+                    } else {
+                        panic!("Errore di parsing: atteso un token di chiusura dopo l'increment.");
+                    }
+                
+                    // Parsing del body
+                    *index += 1;
+                    let mut body: Option<Box<dyn Statement>> = None;
+                
+                    while *index < any_vec.nodes.len() {
+                        match any_vec.nodes.get(*index) {
+                            Some(Any::Token(t)) if t.token_ty == TokenType::Cket => {
+                                // Trovata la parentesi chiusa, fine del body
+                                *index += 1;
+                                break;
+                            }
+                            _ => {
+                                // Parsiamo il prossimo statement nel body
+                                parse_statement(any_vec, index);
+                
+                                if let Some(Any::Statement(stmt)) = any_vec.nodes.get(*index) {
+                                    let parsed_stmt = stmt.clone_box();
+                
+                                    // Se già esiste uno statement nel body, concateno i nuovi statement
+                                    body = match body {
+                                        Some(existing_body) => {
+                                            // Creazione di un nuovo `Concat` statement per concatenare
+                                            Some(Box::new(Concat {
+                                                first: existing_body,
+                                                second: parsed_stmt,
+                                            }))
+                                        }
+                                        None => Some(parsed_stmt), // Primo statement nel body
+                                    };
+                                } else {
+                                    panic!("Errore di parsing: atteso uno statement nel body del ciclo for.");
+                                }
+                
+                                *index += 1;
+                            }
+                        }
+                    }
+                
+                    // Creazione dell'oggetto `For` utilizzando `parsed_init`, `guard`, `parsed_increment` e `body`
+                    let for_stmt = For {
+                        init: parsed_init, // Si può usare unwrap perché abbiamo già fatto il check
+                        guard,
+                        increment: parsed_increment,
+                        body: body.unwrap_or_else(|| Box::new(Skip)), // Usa uno Skip se il body è vuoto
+                    };
+                
+                    // Inserisci il ciclo for nel vettore any_vec
+                    any_vec
+                        .nodes
+                        .insert(*index - 1, Any::Statement(Box::new(for_stmt)));
+                
+                    //any_vec.nodes.remove(*index);
+                }
+                
+                //Gestione repeat until
+                TokenType::Repeat => {
+                    // repeat-until: repeat {body} until guard
+                    // guard: BooleanExpression
+                    // body:  Statement
+                    todo!()
+                }
                 _ => {}
             }
-
         }
         *index += 1;
     }
 }
 
-//TODO GENERAL: IMPLEMENTA PARSE IF WHILE FOR REPEAT, POI EVALUATION DELL'AST
+//TODO GENERAL: IMPLEMENTA PARSE REPEAT, POI EVALUATION DELL'AST
 pub fn analyze(program: String, initial_state: String) {
     //cleaning the input from whitespaces
     let cleanp = program.trim();
