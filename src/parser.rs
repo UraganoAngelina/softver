@@ -28,7 +28,6 @@ use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenType;
 
-
 use std::any;
 use std::fmt;
 use std::fmt::{Display, Error, Formatter};
@@ -378,19 +377,19 @@ pub fn parse_arithmetic_subexpression(
 
     // Creo il vettore Any contenente solo la sottoespressione da parsare
     let mut sub_any_vec = AnyVec { nodes: sub_tok_vec };
-    let mut k = 0;
-    println!("vector arithmetic subexpression: ");
-    while k < sub_any_vec.nodes.len() {
-        println!("{:?}", sub_any_vec.nodes[k]);
-        k += 1;
-    }
+    // let mut k = 0;
+    // println!("vector arithmetic subexpression: ");
+    // while k < sub_any_vec.nodes.len() {
+    //     println!("{:?}", sub_any_vec.nodes[k]);
+    //     k += 1;
+    // }
     // Richiama il parsing della sottoespressione
     let mut sub_index = 0; // Indice locale per la sottoespressione
     parse_arithmetic_expression(&mut sub_any_vec, &mut sub_index);
 
     // Controlla il risultato del parsing
     if let Some(Any::ArithmeticExpression(expr)) = sub_any_vec.nodes.pop() {
-        println!("parsed subexpression {:?}", expr);
+        //println!("parsed subexpression {:?}", expr);
         expr // Ritorna l'espressione parsata
     } else {
         unreachable!("Errore di parsing: expected ArithmeticExpression in sottoespressione.");
@@ -437,12 +436,12 @@ pub fn parse_bool_subexpression(
 
     // Creo il vettore Any contenente solo la sottoespressione da parsare
     let mut sub_any_vec = AnyVec { nodes: sub_tok_vec };
-    let mut k = 0;
-    println!("vector bool subexpression: ");
-    while k < sub_any_vec.nodes.len() {
-        println!("{:?}", sub_any_vec.nodes[k]);
-        k += 1;
-    }
+    // let mut k = 0;
+     //println!("vector bool subexpression: ");
+    // while k < sub_any_vec.nodes.len() {
+    //     println!("{:?}", sub_any_vec.nodes[k]);
+    //     k += 1;
+    // }
 
     // Richiama il parsing della sottoespressione
     let mut sub_index = 0; // Indice locale per la sottoespressione
@@ -450,7 +449,7 @@ pub fn parse_bool_subexpression(
 
     // Controlla il risultato del parsing
     if let Some(Any::BooleanExpression(expr)) = sub_any_vec.nodes.pop() {
-        println!("parsed subexpression {:?}", expr);
+        //println!("parsed subexpression {:?}", expr);
         expr // Ritorna l'espressione parsata
     } else {
         unreachable!("Errore di parsing: expected ArithmeticExpression in sottoespressione.");
@@ -458,7 +457,7 @@ pub fn parse_bool_subexpression(
 }
 
 pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
-    println!("index:= {}", index);
+    //println!("index:= {}", index);
     while *index < tok_vec.nodes.len() {
         // Controlla se il nodo attuale è un token
         if let Some(Any::Token(token)) = tok_vec.nodes.get(*index) {
@@ -587,7 +586,9 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                                     }
                             }
                             _ => {
-                                unreachable!("Errore di parsing: nodo non riconosciuto a destra dell'or.")
+                                unreachable!(
+                                    "Errore di parsing: nodo non riconosciuto a destra dell'or."
+                                )
                             }
                         }
                     } else {
@@ -630,7 +631,9 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 
                     // Dopo l'=, cerca l'operando destro
                     if *index >= tok_vec.nodes.len() {
-                        unreachable!("Errore di parsing: operando destro mancante per l'op booleano =.");
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per l'op booleano =."
+                        );
                     }
                     //println!("second print index:= {}", index);
 
@@ -703,7 +706,9 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 
                     // Dopo il <=, cerca l'operando destro
                     if *index >= tok_vec.nodes.len() {
-                        unreachable!("Errore di parsing: operando destro mancante per l'op booleano <=.");
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per l'op booleano <=."
+                        );
                     }
                     //println!("second print index:= {}", index);
 
@@ -776,7 +781,9 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 
                     // Dopo il <, cerca l'operando destro
                     if *index >= tok_vec.nodes.len() {
-                        unreachable!("Errore di parsing: operando destro mancante per l'op booleano <.");
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per l'op booleano <."
+                        );
                     }
                     //println!("second print index:= {}", index);
 
@@ -849,7 +856,9 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 
                     // Dopo il >=, cerca l'operando destro
                     if *index >= tok_vec.nodes.len() {
-                        unreachable!("Errore di parsing: operando destro mancante per l'op booleano >=.");
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per l'op booleano >=."
+                        );
                     }
                     //println!("second print index:= {}", index);
 
@@ -922,7 +931,9 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 
                     // Dopo il >, cerca l'operando destro
                     if *index >= tok_vec.nodes.len() {
-                        unreachable!("Errore di parsing: operando destro mancante per l'op booleano >.");
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per l'op booleano >."
+                        );
                     }
                     //println!("second print index:= {}", index);
 
@@ -1031,11 +1042,11 @@ pub fn parse_arithmetic_unop(tok_vec: &mut AnyVec, index: &mut usize) {
                         match node {
                             Any::Token(token) => {
                                 if let TokenType::Bra = token.token_ty {
-                                    println!("parsing subexpression");
+                                    //println!("parsing subexpression");
                                     parse_arithmetic_subexpression(tok_vec, index)
                                 } else {
                                     let right_node = tok_vec.nodes.remove(*index);
-                                    println!("parsed right operand {:?}", right_node);
+                                    //println!("parsed right operand {:?}", right_node);
                                     match right_node {
                                         Any::ArithmeticExpression(expr) => expr,
                                         _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '-' unario."),
@@ -1044,7 +1055,7 @@ pub fn parse_arithmetic_unop(tok_vec: &mut AnyVec, index: &mut usize) {
                             }
                             Any::ArithmeticExpression(_expr) => {
                                 let right_node = tok_vec.nodes.remove(*index);
-                                println!("parsed right operand {:?}", right_node);
+                                //println!("parsed right operand {:?}", right_node);
                                 match right_node {
                                     Any::ArithmeticExpression(expr) => expr,
                                     _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '-' unario."),
@@ -1055,7 +1066,9 @@ pub fn parse_arithmetic_unop(tok_vec: &mut AnyVec, index: &mut usize) {
                             ),
                         }
                     } else {
-                        unreachable!("Errore di parsing: nessun token trovato a destra del '-' unario.");
+                        unreachable!(
+                            "Errore di parsing: nessun token trovato a destra del '-' unario."
+                        );
                     };
 
                     let min_expr = Uminus { right };
@@ -1114,11 +1127,11 @@ pub fn parse_bool_unop(tok_vec: &mut AnyVec, index: &mut usize) {
                         match node {
                             Any::Token(token) => {
                                 if let TokenType::Bra = token.token_ty {
-                                    println!("parsing subexpression");
+                                    //println!("parsing subexpression");
                                     parse_bool_subexpression(tok_vec, index)
                                 } else {
                                     let right_node = tok_vec.nodes.remove(*index);
-                                    println!("parsed right operand {:?}", right_node);
+                                    //println!("parsed right operand {:?}", right_node);
                                     match right_node {
                                         Any::BooleanExpression(expr) => expr,
                                         _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '-' unario."),
@@ -1127,7 +1140,7 @@ pub fn parse_bool_unop(tok_vec: &mut AnyVec, index: &mut usize) {
                             }
                             Any::BooleanExpression(_expr) => {
                                 let right_node = tok_vec.nodes.remove(*index);
-                                println!("parsed right operand {:?}", right_node);
+                                //println!("parsed right operand {:?}", right_node);
                                 match right_node {
                                     Any::BooleanExpression(expr) => expr,
                                     _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '-' unario."),
@@ -1138,7 +1151,9 @@ pub fn parse_bool_unop(tok_vec: &mut AnyVec, index: &mut usize) {
                             ),
                         }
                     } else {
-                        unreachable!("Errore di parsing: nessun token trovato a destra del '-' unario.");
+                        unreachable!(
+                            "Errore di parsing: nessun token trovato a destra del '-' unario."
+                        );
                     };
 
                     let min_expr = Not { expression };
@@ -1162,7 +1177,9 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                 TokenType::Plus => {
                     // Prima del `+` si trova l'operando sinistro (left)
                     if *index == 0 {
-                        unreachable!("Errore di parsing: operando sinistro mancante per l'addizione.");
+                        unreachable!(
+                            "Errore di parsing: operando sinistro mancante per l'addizione."
+                        );
                     }
                     let left_node = tok_vec.nodes.remove(*index - 1);
 
@@ -1177,22 +1194,24 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 
                     // Dopo il `+`, cerca l'operando destro
                     if *index >= tok_vec.nodes.len() {
-                        unreachable!("Errore di parsing: operando destro mancante per l'addizione.");
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per l'addizione."
+                        );
                     }
-                    println!("second print index:= {}", index);
+                    //println!("second print index:= {}", index);
 
                     // Se trovi una parentesi aperta, esegui parse_subexpression
                     let right = if let Some(node) = tok_vec.nodes.get(*index) {
                         match node {
                             Any::Token(token) => {
                                 if let TokenType::Bra = token.token_ty {
-                                    println!("parsing subexpression");
+                                    //println!("parsing subexpression");
                                     //println!("parsed by recursion right expression {:?}", parse_subexpression(tok_vec, index));
                                     parse_arithmetic_subexpression(tok_vec, index)
                                 } else {
                                     // Token is not a parenthesis, check if it's a valid arithmetic expression
                                     let right_node = tok_vec.nodes.remove(*index);
-                                    println!("parsed right operand {:?}", right_node);
+                                    //println!("parsed right operand {:?}", right_node);
                                     match right_node {
                                         Any::ArithmeticExpression(expr) => expr,
                                         _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '+'."),
@@ -1201,14 +1220,16 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                             }
                             Any::ArithmeticExpression(_expr) => {
                                 let right_node = tok_vec.nodes.remove(*index);
-                                println!("parsed right operand {:?}", right_node);
+                                //println!("parsed right operand {:?}", right_node);
                                 match right_node {
                                         Any::ArithmeticExpression(expr) => expr,
                                         _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '+'."),
                                     }
                             }
                             _ => {
-                                unreachable!("Errore di parsing: nodo non riconosciuto a destra del '+'.")
+                                unreachable!(
+                                    "Errore di parsing: nodo non riconosciuto a destra del '+'."
+                                )
                             }
                         }
                     } else {
@@ -1241,7 +1262,7 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                     }
                     let left_node = tok_vec.nodes.remove(*index - 1);
 
-                    println!("left operand {:?}", left_node);
+                    //println!("left operand {:?}", left_node);
 
                     let left = match left_node {
                         Any::ArithmeticExpression(expr) => expr,
@@ -1277,7 +1298,7 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                                 } else {
                                     // Token is not a parenthesis, check if it's a valid arithmetic expression
                                     let right_node = tok_vec.nodes.remove(*index);
-                                    println!("parsed right operand {:?}", right_node);
+                                    //println!("parsed right operand {:?}", right_node);
                                     match right_node {
                                         Any::ArithmeticExpression(expr) => expr,
                                         _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '*'."),
@@ -1294,7 +1315,9 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                                     }
                             }
                             _ => {
-                                unreachable!("Errore di parsing: nodo non riconosciuto a destra del '*'.")
+                                unreachable!(
+                                    "Errore di parsing: nodo non riconosciuto a destra del '*'."
+                                )
                             }
                         }
                     } else {
@@ -1315,7 +1338,9 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                 TokenType::Minus => {
                     // Prima del `-` si trova l'operando sinistro (left)
                     if *index == 0 {
-                        unreachable!("Errore di parsing: operando sinistro mancante per la sottrazione.");
+                        unreachable!(
+                            "Errore di parsing: operando sinistro mancante per la sottrazione."
+                        );
                     }
                     let left_node = tok_vec.nodes.remove(*index - 1);
 
@@ -1328,16 +1353,18 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                         ),
                     };
 
-                    println!("printing the token vector after the left elimination");
-                    let mut j = 0;
-                    while j < tok_vec.nodes.len() {
-                        println!("{:?}", tok_vec.nodes[j]);
-                        j = j + 1;
-                    }
+                    // println!("printing the token vector after the left elimination");
+                    // let mut j = 0;
+                    // while j < tok_vec.nodes.len() {
+                    //     println!("{:?}", tok_vec.nodes[j]);
+                    //     j = j + 1;
+                    // }
 
                     // Dopo il `-`, cerca l'operando destro
                     if *index >= tok_vec.nodes.len() {
-                        unreachable!("Errore di parsing: operando destro mancante per la sottrazione.");
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per la sottrazione."
+                        );
                     }
                     //println!("second print index:= {}" , index);
 
@@ -1352,7 +1379,7 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                                 } else {
                                     // Token is not a parenthesis, check if it's a valid arithmetic expression
                                     let right_node = tok_vec.nodes.remove(*index);
-                                    println!("parsed right operand {:?}", right_node);
+                                    //println!("parsed right operand {:?}", right_node);
                                     match right_node {
                                         Any::ArithmeticExpression(expr) => expr,
                                         _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '-'."),
@@ -1369,7 +1396,9 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                                     }
                             }
                             _ => {
-                                unreachable!("Errore di parsing: nodo non riconosciuto a destra del '-'.")
+                                unreachable!(
+                                    "Errore di parsing: nodo non riconosciuto a destra del '-'."
+                                )
                             }
                         }
                     } else {
@@ -1399,13 +1428,15 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 fn clean_from_void(any_vec: &mut AnyVec, index: &mut usize) {
     // Controlla se ci sono almeno due elementi per evitare accessi fuori dai limiti
     while *index < any_vec.nodes.len().saturating_sub(1) {
-        if let (Any::Token(token_bra), Any::Token(token_ket)) = (&any_vec.nodes[*index], &any_vec.nodes[*index + 1]) {
+        if let (Any::Token(token_bra), Any::Token(token_ket)) =
+            (&any_vec.nodes[*index], &any_vec.nodes[*index + 1])
+        {
             // Controlla se il primo token è `Bra` e il secondo è `Ket`
             if token_bra.token_ty == TokenType::Bra && token_ket.token_ty == TokenType::Ket {
                 // Rimuovi entrambi i token
-                any_vec.nodes.remove(*index);     // Rimuovi il token `Bra`
-                any_vec.nodes.remove(*index);     // Rimuovi il token `Ket` (che ha preso il posto di Bra)
-                // Non incrementare l'indice perché hai rimosso due elementi
+                any_vec.nodes.remove(*index); // Rimuovi il token `Bra`
+                any_vec.nodes.remove(*index); // Rimuovi il token `Ket` (che ha preso il posto di Bra)
+                                              // Non incrementare l'indice perché hai rimosso due elementi
                 continue;
             }
         }
@@ -1420,11 +1451,11 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
             match token.token_ty {
                 //TODO Gestione dell'assegnazione: var := arith_expr
                 TokenType::Assign => {
-                    // Prima dell'assegnamento deve esserci una variabile
+                    // Controlla che ci sia una variabile prima dell'assegnamento
                     if *index == 0 {
                         unreachable!("Errore di parsing: variabile mancante prima dell'assegnamento.");
                     }
-                    let var_node = any_vec.nodes.remove(*index - 1);
+                    let var_node = any_vec.nodes.remove(*index - 1); // Estrae il nodo della variabile
                     let var = match var_node.as_arithmetic_expr() {
                         Some(expr) => {
                             if let Some(variable) = expr.as_variable() {
@@ -1435,64 +1466,80 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         }
                         None => unreachable!("Errore di parsing: attesa una variabile prima di ':='."),
                     };
-
-                    // Dopo l'assegnamento deve esserci un'espressione aritmetica
-                    *index += 1;
-                    let expr_node = any_vec.nodes.remove(*index);
+                
+                    // L’espressione aritmetica deve essere subito dopo l'assegnamento
+                    let expr_node = any_vec.nodes.remove(*index); // Nessun incremento dell'indice qui
                     let expr = match expr_node.as_arithmetic_expr() {
                         Some(arith_expression) => arith_expression,
-                        None => unreachable!(
-                            "Errore di parsing: attesa un'espressione aritmetica a destra di ':='."
-                        ),
+                        None => unreachable!("Errore di parsing: attesa un'espressione aritmetica a destra di ':='."),
                     };
-
+                
+                    // Creiamo e inseriamo lo statement di assegnamento
                     let assignment_stmt = Assign {
                         var_name: var.value.clone(),
                         expr: expr.clone_box(),
                     };
-                    any_vec
-                        .nodes
-                        .insert(*index - 1, Any::Statement(Box::new(assignment_stmt)));
+                    any_vec.nodes.insert(*index - 1, Any::Statement(Box::new(assignment_stmt))); // Inserisce lo statement
+                
                     any_vec.nodes.remove(*index);
+                    //Stampa diagnostica per confermare la situazione del vettore
+                    println!("printing the vector after the assign insertion:");
+                    for node in &any_vec.nodes {
+                        println!("{:?}", node);
+                    }
                 }
+                
                 //TODO Gestione della concatenazione: s1 ; s2 (s1 e s2 sono statements)
                 TokenType::Semicolon => {
-                    // Prima del `;` si trova il primo statement (s1)
+                    // Controlla che ci sia uno statement prima del `;`
                     if *index == 0 {
                         unreachable!("Errore di parsing: primo statement mancante prima di ';'.");
                     }
+                
+                    // Rimuove il primo statement (s1) e lo fa il cast
                     let s1_node = any_vec.nodes.remove(*index - 1);
                     let s1 = match s1_node.as_statement() {
                         Some(stmt) => stmt,
                         None => unreachable!("Errore di parsing: atteso uno statement prima di ';'."),
                     };
-
-                    *index += 1;
+                
+                    // Incrementa l'indice per analizzare il prossimo statement
+                    *index -= 1;
                     parse_statement(any_vec, index);
-
+                
                     if let Some(Any::Statement(_)) = any_vec.nodes.get(*index) {
-                        // Rimuovi il nodo che è stato appena parsato e fai il cast
+                        // Rimuove e converte il secondo statement (s2)
                         let s2_node = any_vec.nodes.remove(*index);
                         let s2 = match s2_node.as_statement() {
                             Some(stmt) => stmt,
                             None => unreachable!("Errore di parsing: atteso uno statement dopo ';'."),
                         };
-
+                
+                        // Crea la concatenazione dei due statement
                         let concat_stmt = Concat {
                             first: s1.clone_box(),
                             second: s2.clone_box(),
                         };
-
+                
+                        // Inserisce lo statement concatenato e riduce l'indice di conseguenza
                         any_vec
                             .nodes
-                            .insert(*index - 1, Any::Statement(Box::new(concat_stmt)));
+                            .insert(*index, Any::Statement(Box::new(concat_stmt)));
+                
                     } else {
                         unreachable!("Errore di parsing: atteso uno statement dopo ';'.");
-                    };
-
+                    }
+                
                     // Rimuove il token di concatenazione
                     any_vec.nodes.remove(*index);
+                    
+                    // Stampa diagnostica del vettore per verificare il risultato
+                    // println!("printing the vector after the concat insertion:");
+                    // for node in &any_vec.nodes {
+                    //     println!("{:?}", node);
+                    // }
                 }
+                
                 //TODO Gestione del condizionale if then else
                 TokenType::If => {
                     // Check che l'elemento in any_vec.nodes[index] sia una BooleanExpression,
@@ -1500,7 +1547,9 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     let guard = match any_vec.nodes.get(*index) {
                         Some(Any::BooleanExpression(expr)) => expr.clone_box(),
                         _ => {
-                            unreachable!("Errore di parsing: attesa una espressione booleana dopo 'if'.")
+                            unreachable!(
+                                "Errore di parsing: attesa una espressione booleana dopo 'if'."
+                            )
                         }
                     };
                     // Check della presenza del token THEN in posizione index+1,
@@ -1509,7 +1558,9 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     let branch = match then.as_token() {
                         Some(t) => t,
                         None => {
-                            unreachable!("Errore di parsing: atteso token then dopo condizionale 'if'. ")
+                            unreachable!(
+                                "Errore di parsing: atteso token then dopo condizionale 'if'. "
+                            )
                         }
                     };
                     if branch.token_ty != TokenType::Then {
@@ -1525,7 +1576,9 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         let then_expr = match then_node.as_statement() {
                             Some(stmt) => stmt,
                             None => {
-                                unreachable!("Errore di parsing: atteso uno statement dopo il 'then'.")
+                                unreachable!(
+                                    "Errore di parsing: atteso uno statement dopo il 'then'."
+                                )
                             }
                         };
                         if *index < any_vec.nodes.len() {
@@ -1582,8 +1635,10 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                 }
                 //TODO Gestione del ciclo while
                 TokenType::While => {
+                    //println!("WHILE FOUND ");
                     // check che guard sia una BooleanExpression
                     *index += 1;
+
                     //TODO BRACES CHECK
                     let open_paren = any_vec.nodes.get(*index);
                     if let Some(Any::Token(t)) = open_paren {
@@ -1595,7 +1650,8 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     } else {
                         unreachable!("Errore di parsing: atteso un token dopo 'while'.");
                     }
-                    *index+=1;
+
+                    *index += 1;
                     let guard = match any_vec.nodes.get(*index) {
                         Some(Any::BooleanExpression(expr)) => expr.clone_box(),
                         _ => {
@@ -1604,9 +1660,9 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                             )
                         }
                     };
-                    *index+=1;
+                    *index += 1;
                     let close_paren = any_vec.nodes.get(*index);
-                    if let Some(Any::Token(t)) = open_paren {
+                    if let Some(Any::Token(t)) = close_paren {
                         if t.token_ty != TokenType::Ket {
                             unreachable!(
                                 "Errore di parsing: attesa una parentesi chiusa ')' dopo guardia while."
@@ -1638,10 +1694,14 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                                 break;
                             }
                             _ => {
+                                
                                 // Parsiamo il prossimo statement nel body
                                 parse_statement(any_vec, index);
-
-                                if let Some(Any::Statement(stmt)) = any_vec.nodes.get(*index) {
+                                println!("post panic");
+                                println!("index post panic: {}" , index);
+                                println!("vector at index-4 post panic: {:?}" , any_vec.nodes[*index-4]);
+                                
+                                if let Some(Any::Statement(stmt)) = any_vec.nodes.get(*index-4) {
                                     let parsed_stmt = stmt.clone_box();
 
                                     // Se già esiste uno statement nel body, concateno i nuovi statement
@@ -1659,7 +1719,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                                     unreachable!("Errore di parsing: atteso uno statement nel body del ciclo while.");
                                 }
 
-                                *index += 1;
+                                //*index += 1;
                             }
                         }
                     }
@@ -1681,13 +1741,19 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     any_vec
                         .nodes
                         .insert(*index - 1, Any::Statement(Box::new(while_stmt)));
+                    // println!("printing the vector after the while insertion ");
+                    // let mut j = 0;
+                    // while j < any_vec.nodes.len() {
+                    //     println!("{:?}", any_vec.nodes[j]);
+                    //     j = j + 1;
+                    // }
 
                     any_vec.nodes.remove(*index);
                 }
                 //TODO Gestione ciclo for
                 TokenType::For => {
                     // Controlla la presenza di '(' dopo 'for'
-                    *index+=1;
+                    *index += 1;
                     let open_paren = any_vec.nodes.get(*index);
                     if let Some(Any::Token(t)) = open_paren {
                         if t.token_ty != TokenType::Bra {
@@ -1748,7 +1814,9 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                             unreachable!("Errore di parsing: attesa una parentesi chiusa ')' dopo l'increment.");
                         }
                     } else {
-                        unreachable!("Errore di parsing: atteso un token di chiusura dopo l'increment.");
+                        unreachable!(
+                            "Errore di parsing: atteso un token di chiusura dopo l'increment."
+                        );
                     }
 
                     // Parsing del body
@@ -1761,7 +1829,9 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                             // Trovata la parentesi aperta, procedi con il parsing del body
                             *index += 1;
                         }
-                        _ => unreachable!("Errore di parsing: attesa '{{' dopo la condizione del for."),
+                        _ => unreachable!(
+                            "Errore di parsing: attesa '{{' dopo la condizione del for."
+                        ),
                     }
 
                     while *index < any_vec.nodes.len() {
@@ -1871,10 +1941,14 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     let until_node = any_vec.nodes.get(*index);
                     if let Some(Any::Token(t)) = until_node {
                         if t.token_ty != TokenType::Until {
-                            unreachable!("Errore di parsing: atteso Token Until dopo repeat e body.");
+                            unreachable!(
+                                "Errore di parsing: atteso Token Until dopo repeat e body."
+                            );
                         }
                     } else {
-                        unreachable!("Errore di parsing: atteso un token dopo body del repeat until.");
+                        unreachable!(
+                            "Errore di parsing: atteso un token dopo body del repeat until."
+                        );
                     }
                     let guard = match any_vec.nodes.get(*index) {
                         Some(Any::BooleanExpression(expr)) => expr.clone_box(),
@@ -1888,7 +1962,9 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         guard,
                     };
 
-                    any_vec.nodes.insert(*index -1, Any::Statement(Box::new(repeat_until_statement)));
+                    any_vec
+                        .nodes
+                        .insert(*index - 1, Any::Statement(Box::new(repeat_until_statement)));
                     //any_vec.nodes.remove(*index);
                 }
                 _ => {}
@@ -1931,12 +2007,12 @@ pub fn analyze(program: String, initial_state: String) {
     parse_atomic(&mut any_vec, &mut index);
     index = 0;
 
-    println!(" atomic terms parsed");
-    let mut j = 0;
-    while j < any_vec.nodes.len() {
-        println!("{:?}", any_vec.nodes[j]);
-        j = j + 1;
-    }
+    // println!(" atomic terms parsed");
+    // let mut j = 0;
+    // while j < any_vec.nodes.len() {
+    //     println!("{:?}", any_vec.nodes[j]);
+    //     j = j + 1;
+    // }
     parse_arithmetic_unop(&mut any_vec, &mut index);
     index = 0;
     parse_bool_unop(&mut any_vec, &mut index);
@@ -1960,30 +2036,35 @@ pub fn analyze(program: String, initial_state: String) {
     //boolean expressions
     parse_bool_expression(&mut any_vec, &mut index);
     index = 0;
-    println!("expressions parsed: ");
-    let mut j = 0;
-    while j < any_vec.nodes.len()
-    {
-       println!("{:?}", any_vec.nodes[j]);
-       j=j+1;
-    }
-    index=0;
+    // println!("expressions parsed: ");
+    // let mut j = 0;
+    // while j < any_vec.nodes.len()
+    // {
+    //    println!("{:?}", any_vec.nodes[j]);
+    //    j=j+1;
+    // }
     clean_from_void(&mut any_vec, &mut index);
+    index = 0;
+    println!("Vector after cleaning dead parenthesis: ");
+    let mut j = 0;
+    while j < any_vec.nodes.len() {
+        println!("{:?}", any_vec.nodes[j]);
+        j = j + 1;
+    }
     //statements
     parse_statement(&mut any_vec, &mut index);
+    index = 0;
     println!("statements parsed: ");
     let mut j = 0;
-    while j < any_vec.nodes.len()
-    {
-       println!("{:?}", any_vec.nodes[j]);
-       j=j+1;
+    while j < any_vec.nodes.len() {
+        println!("{:?}", any_vec.nodes[j]);
+        j = j + 1;
     }
-
 
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     //EVALUATING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
-    
+
     // evaluate the final statement
     //occhio al caso angeli degli spazi cancellati: 10- -10
 }
