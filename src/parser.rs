@@ -1512,104 +1512,78 @@ fn clean_from_void(any_vec: &mut AnyVec) {
 pub fn parse_substatement_block(
     any_vec: &mut AnyVec,
     index: &mut usize,
-) -> Option<Box<dyn Statement>> {
-    // Incrementa l'indice per saltare la parentesi graffa aperta
-    println!("index pre increment value {:?}", *index);
-    *index += 1;
-    println!("index post increment value {:?}", *index);
-    println!("ELEMENT AT INDEX {:?}", any_vec.nodes[*index]);
+) -> Option<Box<dyn Statement>> 
+{
     let start = *index;
-    let mut depth = 1; // Traccia la profondità delle parentesi graffe
-    let mut open_brace_index = 0;
+    let mut depth = 0;
 
-    println!("PARSE BLOCK PRINTING");
-    for (i, node) in any_vec.nodes.iter().enumerate() {
-        println!("Indice: {}, Nodo: {:?}", i, node);
-    }
-    // Cerca la parentesi graffa chiusa corrispondente
+    // Scorrere fino alla parentesi graffa chiusa, incrementando la profondità
     while *index < any_vec.nodes.len() {
-        println!(
-            "SUBSTATEMENT ELEMENT {:?} AT INDEX {:?}",
-            any_vec.nodes.get(*index),
-            *index
-        );
-
-        if let Some(Any::Token(token)) = any_vec.nodes.get(*index) {
-            match token.token_ty {
-                TokenType::CBra => {
-                    depth += 1;
-                    //open_brace_index = *index
-                } // Nuova parentesi graffa aperta, aumenta la profondità
-                TokenType::Cket => {
-                    depth -= 1; // Parentesi graffa chiusa, diminuisci la profondità
-                                //any_vec.nodes.remove(*index);
-                    //*index -= 1;
-                    if depth == 0 {
-                        println!("Depth vaule  {:?}", depth);
-                        //any_vec.nodes.remove(open_brace_index);
-                        //*index -= 1;
-                        break; // Trovata la parentesi graffa chiusa corrispondente ed elimino anche la corrispondente aperta
-                    }
-                }
-                _ => {}
+        match &any_vec.nodes[*index] {
+            Any::Token(token) if token.token_ty == TokenType::CBra => {
+                depth += 1;
             }
+            Any::Token(token) if token.token_ty == TokenType::Cket => {
+                depth -= 1;
+                if depth == 0 {
+                    *index += 1; // Include il token finale `}`
+                    break;
+                }
+            }
+            _ => {}
         }
-        println!("DEPTH VALUE {:?}", depth);
         *index += 1;
     }
-    println!("PARSE BLOCK  POST CYLCE PRINTING");
+
+    // Debugging
+    println!("PARSE BLOCK  POST CYCLE PRINTING");
     for (i, node) in any_vec.nodes.iter().enumerate() {
         println!("Indice: {}, Nodo: {:?}", i, node);
     }
-    println!("DEPTH FINAL VALUE {:?}" , depth);
+    println!("DEPTH FINAL VALUE {:?}", depth);
     if depth != 0 {
         unreachable!("Errore di parsing: parentesi graffa chiusa mancante.");
     }
 
-    // Conta il numero di elementi rimossi per aggiornare l’indice principale
-    let num_removed = *index - start;
-    
-    // Estrarre gli elementi tra start e *index per creare un sotto-vettore
-    let sub_tok_vec = any_vec.nodes.drain(start..*index).collect::<Vec<Any>>();
-    println!("Contenuto di `sub_tok_vec.nodes` prima del parse_statement da sub_block:");
-    for (i, node) in sub_tok_vec.iter().enumerate() {
-        println!("Indice: {}, Nodo: {:?}", i, node);
+    // Drenare i token che compongono uno statement completo
+    let mut sub_tok_vec = Vec::new();
+    for i in start..*index {
+        sub_tok_vec.push(any_vec.nodes.remove(start)); // Rimuovi da `any_vec` e aggiungi a `sub_tok_vec`
     }
-    // Aggiorna l'indice principale per riflettere i token rimossi
-    *index -= num_removed;
 
-    // Crea un nuovo `AnyVec` contenente la sottoespressione da parsare
+    // Aggiorna l'indice principale per riflettere i token rimossi
+    *index = start;
+
+    // Crea un nuovo `AnyVec` per il blocco
     let mut sub_any_vec = AnyVec { nodes: sub_tok_vec };
 
-    println!("Contenuto di `any_vec.nodes` prima del parse_statement da sub_block:");
-    for (i, node) in any_vec.nodes.iter().enumerate() {
+    // Debugging
+    println!("Contenuto di `sub_any_vec.nodes` prima del parse_statement da sub_block:");
+    for (i, node) in sub_any_vec.nodes.iter().enumerate() {
         println!("Indice: {}, Nodo: {:?}", i, node);
     }
+
 
     // Richiama il parsing degli statement sulla sottoespressione
     let mut sub_index = 0; // Indice locale per la sottoespressione
     parse_statement(&mut sub_any_vec, &mut sub_index);
 
     println!("Contenuto di `any_vec.nodes` dopo del parse_statement da sub_block:");
-    for (i, node) in any_vec.nodes.iter().enumerate() {
+    for (i, node) in sub_any_vec.nodes.iter().enumerate() {
         println!("Indice: {}, Nodo: {:?}", i, node);
     }
     // Controlla il risultato del parsing
-   
-    match sub_any_vec.nodes.pop() {
-        Some(Any::Statement(stmt)) => {
-            println!("Trovato uno Statement: {:?}", stmt);
-            Some(stmt) // Ritorna lo statement parsato
-        }
-        Some(other) => {
-            println!("Trovato un altro tipo di nodo: {:?}", other);
-            unreachable!("Errore di parsing: atteso uno Statement nel blocco.");
-        }
-        None => {
-            unreachable!("Errore di parsing: nessun elemento trovato nel blocco.");
+
+    for node in sub_any_vec.nodes.iter() {
+        if let Any::Statement(stmt) = node {
+            return Some(stmt.clone_box()); // Trova e restituisce il primo `Statement`
         }
     }
-    
+
+    // Messaggio di errore nel caso non si trovi uno `Statement`
+    eprintln!("Errore di parsing: nessuno Statement trovato nel blocco.");
+    None
+        
 }
 
 pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
@@ -1636,10 +1610,10 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
 
                     println!(
                         "TRYING TO REMOVE {:?} AT INDEX {:?}",
-                        any_vec.nodes[*index - *index],
-                        *index - *index
+                        any_vec.nodes[*index - 1],
+                        *index -1
                     );
-                    let var_node = any_vec.nodes.remove(*index - *index); // Estrae il nodo della variabile
+                    let var_node = any_vec.nodes.remove(*index - 1); // Estrae il nodo della variabile
                     let var = match var_node.as_arithmetic_expr() {
                         Some(expr) => {
                             if let Some(variable) = expr.as_variable() {
@@ -1663,10 +1637,10 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
                     // L’espressione aritmetica deve essere subito dopo l'assegnamento
                     println!(
                         "removing element {:?} at index {:?}",
-                        any_vec.nodes[*index - *index],
-                        *index - *index
+                        any_vec.nodes[*index - 1],
+                        *index -1
                     );
-                    let expr_node = any_vec.nodes.remove(*index - *index); // Nessun incremento dell'indice qui
+                    let expr_node = any_vec.nodes.remove(*index - 1); // Nessun incremento dell'indice qui
                     let expr = match expr_node.as_arithmetic_expr() {
                         Some(arith_expression) => arith_expression,
                         None => unreachable!(
@@ -1739,12 +1713,12 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
                     // Verifica del secondo statement
                     //println!("VECTOR ELEMENT: {:?} AT INDEX - 2 : {:?}" , any_vec.nodes[*index-2], *index-2);
                     println!(
-                        "VECTOR ELEMENT: {:?} AT INDEX - 1: {:?}",
-                        any_vec.nodes[*index - 1],
-                        *index - 1
+                        "VECTOR ELEMENT: {:?} AT INDEX: {:?}",
+                        any_vec.nodes[start_index-1],
+                        start_index-1
                     );
-                    if let Some(Any::Statement(_)) = any_vec.nodes.get(*index - 1) {
-                        let s2_node = any_vec.nodes.remove(*index - 1);
+                    if let Some(Any::Statement(_)) = any_vec.nodes.get(start_index-1) {
+                        let s2_node = any_vec.nodes.remove(start_index-1);
                         let s2 = match s2_node.as_statement() {
                             Some(stmt) => stmt,
                             None => {
@@ -1833,12 +1807,12 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
                     }
 
                     println!(
-                        "TRYING TO REMOVE IN ELSE BRANCH {:?} AT INDEX {:?}", any_vec.nodes[*index-1], *index);
+                        "TRYING TO REMOVE IN ELSE BRANCH {:?} AT INDEX {:?}", any_vec.nodes[*index], *index);
                     // Controllo per il token `else` dopo il blocco `then`
-                    if let Some(Any::Token(tok)) = any_vec.nodes.get(*index-1) {
+                    if let Some(Any::Token(tok)) = any_vec.nodes.get(*index) {
                         if tok.token_ty == TokenType::Else {
                             // Rimuove il token `else`
-                            any_vec.nodes.remove(*index-1);
+                            any_vec.nodes.remove(*index);
 
                             // Parsing del blocco `else` con `parse_statement_block`
                             println!("Parsing del blocco ELSE...");
@@ -1975,6 +1949,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
                         "should be c_bra IN WHILE {:?} at index {:?}",
                         any_vec.nodes[*index], *index
                     );
+                    let body_start_index = *index;
                     // Utilizza parse_statement_block per ottenere il body del ciclo `while`
                     let body = match parse_substatement_block(any_vec, index) {
                         Some(statement) => statement,
@@ -1985,7 +1960,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
                     let while_stmt = While { guard, body };
 
                     // Inserimento del `while` statement nel vettore any_vec.nodes
-                    let body_start_index = *index - 1;
+                    
                     any_vec
                         .nodes
                         .insert(body_start_index, Any::Statement(Box::new(while_stmt)));
