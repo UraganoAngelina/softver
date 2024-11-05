@@ -24,7 +24,6 @@ use crate::ast::statement::RepeatUntil;
 use crate::ast::statement::Skip;
 use crate::ast::statement::Statement;
 use crate::ast::statement::While;
-use crate::ast::State;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenType;
@@ -1190,40 +1189,6 @@ pub fn parse_bool_unop(tok_vec: &mut AnyVec, index: &mut usize) {
     }
 }
 
-pub fn remove_matching_braces(any_vec: &mut AnyVec, open_brace_index: usize) {
-    // Assicuriamoci che l'indice `open_brace_index` sia valido e che corrisponda a una parentesi graffa aperta
-    if let Some(Any::Token(ref open_token)) = any_vec.nodes.get(open_brace_index) {
-        if open_token.token_ty == TokenType::CBra {
-            // Scorriamo il vettore a partire dall'indice successivo per trovare la parentesi chiusa
-            for i in open_brace_index + 1..any_vec.nodes.len() {
-                if let Some(Any::Token(ref close_token)) = any_vec.nodes.get(i) {
-                    if close_token.token_ty == TokenType::Cket {
-                        // Rimuove la parentesi graffa aperta e chiusa
-                        any_vec.nodes.remove(i); // Rimuove la parentesi graffa chiusa prima
-                        any_vec.nodes.remove(open_brace_index); // Rimuove la parentesi graffa aperta
-                        println!(
-                            "Parentesi graffe aperta e chiusa trovate e rimosse agli indici {}, {}",
-                            open_brace_index, i
-                        );
-                        return; // Esci dopo aver rimosso la coppia di parentesi
-                    }
-                }
-            }
-            unreachable!(
-                "Errore: parentesi graffa chiusa non trovata dopo l'indice {}",
-                open_brace_index
-            );
-        } else {
-            unreachable!(
-                "Errore: il nodo all'indice {} non è una parentesi graffa aperta",
-                open_brace_index
-            );
-        }
-    } else {
-        unreachable!("Errore: indice non valido o il nodo non è un token");
-    }
-}
-
 pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
     //println!("index:= {}", index);
     while *index < tok_vec.nodes.len() {
@@ -1534,7 +1499,6 @@ fn clean_from_void(any_vec: &mut AnyVec) {
         }
     }
 }
-
 
 pub fn collect_for_parts(any_vec: &AnyVec, index: &mut usize) -> Option<(AnyVec, AnyVec, AnyVec)> {
     let mut collected_init = Vec::new();
@@ -2247,7 +2211,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
     }
 }
 
-//TODO GENERAL: IMPLEMENTA PARSE REPEAT, POI EVALUATION DELL'AST
+
 pub fn analyze(program: String, initial_state: String) {
     //cleaning the input from whitespaces
     let cleanp = program.trim();

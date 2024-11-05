@@ -1,1 +1,1 @@
-repeat { if x>3 then {x:=10} else {y:=y+1}} until y>5
+repeat { if x>3 then {x:=10;z:=z*1} else {y:=y+1}} until y>5
