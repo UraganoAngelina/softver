@@ -1721,13 +1721,9 @@ pub fn parse_substatement_block(
         sub_tok_vec.push(any_vec.nodes.remove(start)); // Rimuovi da `any_vec` e aggiungi a `sub_tok_vec`
     }
 
-    // Aggiorna l'indice principale per riflettere i token rimossi
     *index = start;
-
-    // Crea un nuovo `AnyVec` per il blocco
     let mut sub_any_vec = AnyVec { nodes: sub_tok_vec };
 
-    // Debugging
     println!("Contenuto di `sub_any_vec.nodes` prima del parse_statement da sub_block:");
     for (i, node) in sub_any_vec.nodes.iter().enumerate() {
         println!("Indice: {}, Nodo: {:?}", i, node);
@@ -2186,86 +2182,62 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
                 //TODO Gestione repeat until
                 TokenType::Repeat => {
                     // repeat-until: repeat {body} until guard
-                    // guard: BooleanExpression
+                    //remove repeat token
+                    println!(
+                        "removing element IN REPEAT UNTIL {:?} at index {:?}",
+                        any_vec.nodes[*index], *index
+                    );
+                    any_vec.nodes.remove(*index);
 
-                    // Parsing del body
-                    *index += 1;
-                    let mut body: Option<Box<dyn Statement>> = None;
-
-                    let open_brace = any_vec.nodes.get(*index);
-                    match open_brace {
-                        Some(Any::Token(t)) if t.token_ty == TokenType::CBra => {
-                            // Trovata la parentesi aperta, procedi con il parsing del body
-                            *index += 1;
-                        }
-                        _ => unreachable!(
-                            "Errore di parsing: attesa '{{' dopo la condizione del repeat until."
-                        ),
+                    println!(
+                        "should be open_Cbra IN REPEAT UNTIL {:?} at index {:?}",
+                        any_vec.nodes[*index], *index
+                    );
+                    let open_paren = any_vec.nodes.get(*index);
+                    if let Some(Any::Token(t)) = open_paren {
+                        if t.token_ty != TokenType::CBra {
+                            unreachable!(
+                                "Errore di parsing: attesa una parentesi aperta '(' dopo 'repeat-until'."
+                            );
+                        } 
+                    } else {
+                        unreachable!("Errore di parsing: atteso un token dopo 'repeat-until'.");
                     }
-
-                    while *index < any_vec.nodes.len() {
-                        match any_vec.nodes.get(*index) {
-                            Some(Any::Token(t)) if t.token_ty == TokenType::Cket => {
-                                // Trovata la parentesi chiusa, fine del body
-                                *index += 1;
-                                break;
-                            }
-                            _ => {
-                                // Parsiamo il prossimo statement nel body
-                                parse_statement(any_vec, index);
-
-                                if let Some(Any::Statement(stmt)) = any_vec.nodes.get(*index) {
-                                    let parsed_stmt = stmt.clone_box();
-
-                                    // Se già esiste uno statement nel body, concateno i nuovi statement
-                                    body = match body {
-                                        Some(existing_body) => {
-                                            // Creazione di un nuovo `Concat` statement per concatenare
-                                            Some(Box::new(Concat {
-                                                first: existing_body,
-                                                second: parsed_stmt,
-                                            }))
-                                        }
-                                        None => Some(parsed_stmt), // Primo statement nel body
-                                    };
-                                } else {
-                                    unreachable!("Errore di parsing: atteso uno statement nel body del ciclo repeat until.");
-                                }
-
-                                *index += 1;
-                            }
-                        }
+                    let body_start_index = *index;
+                    // Utilizza parse_statement_block per ottenere il body del ciclo `while`
+                    let body = match parse_substatement_block(any_vec, index) {
+                        Some(statement) => statement,
+                        None => Box::new(Skip), // Se il body è vuoto, utilizza uno statement Skip come default
+                    };
+                    
+                    //match del token until
+                    println!("PRINTING after body in REPEAT UNTIL:");
+                    for (i, node) in any_vec.nodes.iter().enumerate() {
+                        println!("Indice: {}, Nodo: {:?}", i, node);
                     }
-                    *index += 1;
-                    //match su token until dopo il body
-                    let until_node = any_vec.nodes.get(*index);
-                    if let Some(Any::Token(t)) = until_node {
+                    println!("TRYING TO REMOVE {:?} AT INDEX {:?} IN REPEAT UNTIL" , any_vec.nodes[*index], *index);
+                    let until_token = any_vec.nodes.get(*index);
+                    if let Some(Any::Token(t)) = until_token {
                         if t.token_ty != TokenType::Until {
                             unreachable!(
-                                "Errore di parsing: atteso Token Until dopo repeat e body."
+                                "Errore di parsing: atteso 'until' dopo il body del ciclo 'repeat-until'."
                             );
                         }
                     } else {
-                        unreachable!(
-                            "Errore di parsing: atteso un token dopo body del repeat until."
-                        );
+                        unreachable!("Errore di parsing: atteso un token 'until' dopo il body del ciclo.");
                     }
+                    
+                    //match della guardia dopo token until, che sia una BooleanExpression
+                    *index += 1;
                     let guard = match any_vec.nodes.get(*index) {
-                        Some(Any::BooleanExpression(expr)) => expr.clone_box(),
-                        _ => {
-                            unreachable!("Errore di parsing: attesa un' espressione booleana come seconda condizione del repeat until.");
-                        }
+                        Some(Any::BooleanExpression(bexp)) => bexp.clone_box(),
+                        _ => unreachable!("Errore di parsing: attesa un'espressione booleana dopo 'until'."),
                     };
 
-                    let repeat_until_statement = RepeatUntil {
-                        body: body.unwrap_or_else(|| Box::new(Skip)),
-                        guard,
-                    };
-
+                    let repeat_until_statement = RepeatUntil{body , guard};
                     any_vec
                         .nodes
-                        .insert(*index - 1, Any::Statement(Box::new(repeat_until_statement)));
-                    //any_vec.nodes.remove(*index);
+                        .insert(body_start_index, Any::Statement(Box::new(repeat_until_statement)));
                 }
                 _ => {}
             }
