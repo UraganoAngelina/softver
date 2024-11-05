@@ -2,19 +2,11 @@ mod ast;
 mod parser;
 pub mod lexer;
 
-use std::env;
 use std::fs;
 use std::path::Path;
-use ast::boolean::GreatEqual;
-use ast::statement::Statement;
-use ast::arithmetic::Numeral;
-use ast::arithmetic::Add;
-use ast::statement::Assign;
-use ast::statement::While;
 
-fn main() {
-    let mut state = ast::State::new();
-    
+
+fn main() {    
     //test file path
     let program_file_path = Path::new("/home/alberto/Desktop/softver/src/test/ifTest");
     let state_file_path = Path::new("/home/alberto/Desktop/softver/src/test/ifState");
@@ -24,10 +16,9 @@ fn main() {
         .expect("Should have been able to read the program code");
     let initial_state = fs::read_to_string(state_file_path).expect("Should have been able to read the state");
 
-    //parse the program
+    //lex parse and evaluate the program
     parser::analyze(contents, initial_state);
     
-    //evaluate the program
 
     
 

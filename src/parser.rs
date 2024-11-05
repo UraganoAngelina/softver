@@ -1,3 +1,4 @@
+use crate::ast;
 use crate::ast::arithmetic::Add;
 use crate::ast::arithmetic::ArithmeticExpression;
 use crate::ast::arithmetic::Minus;
@@ -2223,17 +2224,17 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
                                 "Errore di parsing: atteso 'until' dopo il body del ciclo 'repeat-until'."
                             );
                         }
+                        else {any_vec.nodes.remove(*index);}
                     } else {
                         unreachable!("Errore di parsing: atteso un token 'until' dopo il body del ciclo.");
                     }
                     
                     //match della guardia dopo token until, che sia una BooleanExpression
-                    *index += 1;
                     let guard = match any_vec.nodes.get(*index) {
                         Some(Any::BooleanExpression(bexp)) => bexp.clone_box(),
                         _ => unreachable!("Errore di parsing: attesa un'espressione booleana dopo 'until'."),
                     };
-
+                    any_vec.nodes.remove(*index);
                     let repeat_until_statement = RepeatUntil{body , guard};
                     any_vec
                         .nodes
@@ -2344,10 +2345,17 @@ pub fn analyze(program: String, initial_state: String) {
     //EVALUATING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     // evaluate the final statement
-    // if let Some(last_node) = any_vec.nodes.last(){
-    //     if let Some(statement) = last_node.as_statement(){
-    //         statement.evaluate();
-    //     }
-    // }
+    let mut state = ast::State::new();
+
+    if let Some(last_node) = state_vec.nodes.last(){
+        if let Some(statement) = last_node.as_statement(){
+            statement.evaluate(& mut state);
+        }
+    }
+    if let Some(last_node) = any_vec.nodes.last(){
+        if let Some(statement) = last_node.as_statement(){
+            statement.evaluate(& mut state);
+        }
+    }
     //occhio al caso angeli degli spazi cancellati: 10- -10
 }
