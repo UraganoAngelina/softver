@@ -3,6 +3,7 @@ use std::fmt::Debug;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Clone)]
 pub enum TokenType {
     // Numeri
     Number(i32),
@@ -45,6 +46,8 @@ pub enum TokenType {
     Cket,      // '}'
     Semicolon, // ';'
 }
+
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct Token {
     pub value: String,
