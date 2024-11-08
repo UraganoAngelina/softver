@@ -88,15 +88,6 @@ impl Lexer {
         }
     }
 
-    // Restituisce il carattere successivo senza avanzare
-    fn peek(&self) -> Option<char> {
-        if self.pos + 1 >= self.input.len() {
-            None
-        } else {
-            Some(self.input[self.pos + 1])
-        }
-    }
-
     // Avanza di un carattere
     fn advance(&mut self) {
         self.pos += 1;
@@ -118,8 +109,6 @@ impl Lexer {
         self.skip_whitespace();
 
         if let Some(current) = self.current_char() {
-            let current_clone = current.to_string();
-
             let curr_token = match current {
                 // Operatori singoli e doppi
                 '+' => {

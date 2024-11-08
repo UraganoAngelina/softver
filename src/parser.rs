@@ -1,29 +1,9 @@
+use crate::ast::{
+    arithmetic::*,
+    boolean::*,
+    statement::*,
+};
 use crate::ast;
-use crate::ast::arithmetic::Add;
-use crate::ast::arithmetic::ArithmeticExpression;
-use crate::ast::arithmetic::Minus;
-use crate::ast::arithmetic::Numeral;
-use crate::ast::arithmetic::Product;
-use crate::ast::arithmetic::Uminus;
-use crate::ast::arithmetic::Variable;
-use crate::ast::boolean::And;
-use crate::ast::boolean::Boolean;
-use crate::ast::boolean::BooleanExpression;
-use crate::ast::boolean::Equal;
-use crate::ast::boolean::Great;
-use crate::ast::boolean::GreatEqual;
-use crate::ast::boolean::Less;
-use crate::ast::boolean::LessEqual;
-use crate::ast::boolean::Not;
-use crate::ast::boolean::Or;
-use crate::ast::statement::Assign;
-use crate::ast::statement::Concat;
-use crate::ast::statement::For;
-use crate::ast::statement::IfThenElse;
-use crate::ast::statement::RepeatUntil;
-use crate::ast::statement::Skip;
-use crate::ast::statement::Statement;
-use crate::ast::statement::While;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenType;
@@ -110,15 +90,6 @@ impl Any {
         Any::Token(token)
     }
 
-    // Funzione per ottenere un riferimento a BooleanExpression (se presente)
-    pub fn as_boolean_expr(&self) -> Option<&Box<dyn BooleanExpression>> {
-        if let Any::BooleanExpression(expr) = self {
-            Some(expr)
-        } else {
-            None
-        }
-    }
-
     // Funzione per ottenere un riferimento a ArithmeticExpression (se presente)
     pub fn as_arithmetic_expr(&self) -> Option<&Box<dyn ArithmeticExpression>> {
         if let Any::ArithmeticExpression(expr) = self {
@@ -170,18 +141,6 @@ impl Clone for Any {
 }
 
 impl AnyVec {
-    pub fn push_boolean_expr(&mut self, expr: Box<dyn BooleanExpression>) {
-        self.nodes.push(Any::from_boolean_expr(expr));
-    }
-
-    pub fn push_arithmetic_expr(&mut self, expr: Box<dyn ArithmeticExpression>) {
-        self.nodes.push(Any::from_arithmetic_expr(expr));
-    }
-
-    pub fn push_statement(&mut self, stmt: Box<dyn Statement>) {
-        self.nodes.push(Any::from_statement(stmt));
-    }
-
     pub fn push_token(&mut self, token: Token) {
         self.nodes.push(Any::from_token(token));
     }
@@ -432,7 +391,7 @@ pub fn parse_bool_subexpression(
     }
     let num_removed = *index - start;
     // Parsiamo la sottoespressione tra start e index-1
-    let mut sub_tok_vec = tok_vec.nodes.drain(start..*index).collect::<Vec<Any>>();
+    let sub_tok_vec = tok_vec.nodes.drain(start..*index).collect::<Vec<Any>>();
 
     // Aggiorna l'indice principale in base alla nuova lunghezza di tok_vec
     // Sottrai il numero di elementi drenati (index - start) per correggere l'indice
@@ -1568,10 +1527,10 @@ pub fn parse_for_block(
     }
 
     let mut sub_vec = Vec::new();
-    for i in start..end {
+    for _i in start..end {
         sub_vec.push(any_vec.nodes.remove(start)); // Rimuovi da `any_vec` e aggiungi a `sub_tok_vec`
     }
-    let mut sub_any_vec = AnyVec {nodes: sub_vec}; //qui dentro ho tutta la guardia del for 
+    let  sub_any_vec = AnyVec {nodes: sub_vec}; //qui dentro ho tutta la guardia del for 
     let mut sub_index=0;
     println!("SUB ANY FOR POST  FOR CYCLE PRINTING");
     for (i, node) in sub_any_vec.nodes.iter().enumerate() {
@@ -1594,7 +1553,7 @@ pub fn parse_for_block(
 
     // Parsing del blocco di guardia (GUARD) come BooleanExpression
     // non serve fare realmente parsing in quanto le BooleanExpressions sono già parsate
-    let mut guard_any_vec = AnyVec { nodes: guard_vec.nodes };
+    let  guard_any_vec = AnyVec { nodes: guard_vec.nodes };
     let guard = guard_any_vec.nodes.into_iter().find_map(|node| {
         if let Any::BooleanExpression(bexp) = node {
             Some(bexp)
@@ -1669,7 +1628,7 @@ pub fn parse_substatement_block(
 
     // Drenare i token che compongono uno statement completo
     let mut sub_tok_vec = Vec::new();
-    for i in start..*index {
+    for _i in start..*index {
         sub_tok_vec.push(any_vec.nodes.remove(start)); // Rimuovi da `any_vec` e aggiungi a `sub_tok_vec`
     }
 
@@ -1702,7 +1661,7 @@ pub fn parse_substatement_block(
     None
 }
 
-pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
+pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
     while *index < any_vec.nodes.len() {
         println!("ANALYZED INDEXES: {:?}", *index);
         println!("ANALYZED ITEMS: {:?}", any_vec.nodes[*index]);
@@ -2053,10 +2012,10 @@ pub fn parse_statement(any_vec: &mut AnyVec, mut index: &mut usize) {
                     let open_brace = any_vec.nodes.get(*index);
                     if let Some(Any::Token(t)) = open_brace {
                         if t.token_ty != TokenType::CBra {
-                            unreachable!("Errore di parsing: attesa '{{' dopo la guardia.");
+                            unreachable!("Errore di parsing: attesa {} dopo la guardia.", "{");
                         }
                     } else {
-                        unreachable!("Errore di parsing: atteso '{{' dopo la guardia.");
+                        unreachable!("Errore di parsing: atteso {} dopo la guardia.", "{");
                     }
                     println!("WHILE PRINTING after curly-bra:");
                     for (i, node) in any_vec.nodes.iter().enumerate() {
@@ -2281,9 +2240,7 @@ pub fn analyze(program: String, initial_state: String) {
         j = j + 1;
     }
     parse_statement(&mut any_vec, &mut index);
-    index = 0;
     clean_from_void(&mut any_vec);
-    index = 0;
 
     println!("statements parsed: ");
     let mut j = 0;
