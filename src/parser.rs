@@ -145,19 +145,6 @@ impl Any {
             None
         }
     }
-    //Funzione per ritornare un riferimento ad Any
-    pub fn as_any(&self) -> &Self {
-        self
-    }
-
-    pub fn as_assign(&self) -> Option<&Assign> {
-        if let Any::Statement(stmt) = self {
-            // Tenta di ottenere un riferimento a `Assign` usando `as_any` e `downcast_ref`
-            stmt.as_any().downcast_ref::<Assign>()
-        } else {
-            None
-        }
-    }
 }
 pub struct AnyVec {
     nodes: Vec<Any>,
@@ -2316,10 +2303,15 @@ pub fn analyze(program: String, initial_state: String) {
             statement.evaluate(& mut state);
         }
     }
+    println!("state printing after state evaluation {:?}" , state);
+
+    println!("any_vec last node {:?}", any_vec.nodes.last());
     if let Some(last_node) = any_vec.nodes.last(){
         if let Some(statement) = last_node.as_statement(){
             statement.evaluate(& mut state);
         }
     }
+
+    println!("state printing after code evaluation {:?}" , state);
     //occhio al caso angeli degli spazi cancellati: 10- -10
 }
