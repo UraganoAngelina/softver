@@ -24,7 +24,9 @@ impl Statement for Assign {
 
     fn evaluate(&self, state: &mut State) -> State {
         let value = self.expr.evaluate(state);
+        println!("value in assign eval {:?}, for var {:?}", value, self.var_name.clone());
         state.insert(self.var_name.clone(), value);
+        println!("state after assign insertion: {:?}", state);
         state.clone() // Restituisce lo stato aggiornato
     }
 }
@@ -58,10 +60,10 @@ impl Statement for Concat {
 
     fn evaluate(&self, state: &mut State) -> State {
         let mut state_after_first = self.first.evaluate(state);
-        //println!("state after first {:?}", state_after_first);
+        println!("state after first {:?}", state_after_first);
         let state_after_second=self.second.evaluate(&mut state_after_first); // Valuta il secondo statement con lo stato aggiornato e restituisce il risultato finale
-        //println!("state after second {:?}" , state_after_second );
-        state.clear();
+        println!("state after second {:?}" , state_after_second );
+        //state.clear();
         state.extend(state_after_second.clone());
     
         state_after_second // ritorna lo stato finale
@@ -87,13 +89,17 @@ impl Statement for IfThenElse {
     fn evaluate(&self, state: &mut State) -> State {
         if self.guard.evaluate(state) {
             let state_after_true=self.true_expr.evaluate(state); // Restituisce lo stato risultante da true_expr
-            state.clear();
+            //state.clear();
+            println!("state after true: {:?}", state_after_true);
             state.extend(state_after_true.clone());
+            println!("extended state: {:?}", state);
             state_after_true
         } else {
             let state_after_false=self.false_expr.evaluate(state); // Restituisce lo stato risultante da false_expr
-            state.clear();
+            //state.clear();
+            println!("state after false: {:?}", state_after_false);
             state.extend(state_after_false.clone());
+            println!("extended state: {:?}", state);
             state_after_false
         }
     }
@@ -117,9 +123,11 @@ impl Statement for While {
         let mut current_state = state.clone();
         while self.guard.evaluate(&current_state) {
             current_state = self.body.evaluate(&mut current_state);
+            println!("while body current state: {:?}", current_state);
         }
-        state.clear();
+        //state.clear();
         state.extend( current_state.clone());
+        println!("Extended state after while eval: {:?}", state);
         current_state // Restituisce lo stato dopo l'uscita dal ciclo
     }
 }
@@ -146,10 +154,13 @@ impl Statement for For {
         let mut current_state = self.init.evaluate(state); // Esegue l'inizializzazione
         while self.guard.evaluate(&current_state) {
             current_state = self.body.evaluate(&mut current_state);
+            println!("for body: {:?}", current_state);
             current_state = self.increment.evaluate(&mut current_state);
+            println!("for increment: {:?}", current_state);
         }
-        state.clear();
+        //state.clear();
         state.extend(current_state.clone());
+        println!("Extended state after for eval: {:?}", state);
         current_state // Restituisce lo stato dopo il ciclo
     }
 }
@@ -172,12 +183,14 @@ impl Statement for RepeatUntil {
         let mut current_state = state.clone();
         loop {
             current_state = self.body.evaluate(&mut current_state);
+            println!("repeat until body current state: {:?}", current_state);
             if self.guard.evaluate(&current_state) {
                 break;
             }
         }
-        state.clear();
+        //state.clear();
         state.extend(current_state.clone());
+        println!("Extended state after repeat until eval: {:?}", state);
         current_state // Restituisce lo stato finale
     }
 }
