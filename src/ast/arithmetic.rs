@@ -4,11 +4,11 @@ use std::fmt::Debug;
 pub trait ArithmeticExpression: Debug {
     fn clone_box(&self) -> Box<dyn ArithmeticExpression>;
     fn as_variable(&self) -> Option<&Variable>;
-    fn evaluate(&self, state: &State) -> i32;
+    fn evaluate(&self, state: &State) -> i64;
 }
 
 #[derive(Debug)]
-pub struct Numeral(pub i32);
+pub struct Numeral(pub i64);
 
 impl ArithmeticExpression for Numeral {
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
@@ -18,7 +18,7 @@ impl ArithmeticExpression for Numeral {
         // Restituisce Some(self) se è una variabile
         None
     }
-    fn evaluate(&self, _state: &State) -> i32 {
+    fn evaluate(&self, _state: &State) -> i64 {
         self.0
     }
 }
@@ -38,7 +38,7 @@ impl ArithmeticExpression for Variable {
         // Restituisce Some(self) se è una variabile
         Some(self)
     }
-    fn evaluate(&self, state: &State) -> i32 {
+    fn evaluate(&self, state: &State) -> i64 {
         match state.get(&self.value) {
             Some(&val) => val,
             None => panic!("Variabile '{}' non trovata nello stato!", self.value),
@@ -63,7 +63,7 @@ impl ArithmeticExpression for Add {
         // Restituisce Some(self) se è una variabile
         None
     }
-    fn evaluate(&self, state: &State) -> i32 {
+    fn evaluate(&self, state: &State) -> i64 {
         self.left.evaluate(state) + self.right.evaluate(state)
     }
 }
@@ -85,7 +85,7 @@ impl ArithmeticExpression for Product {
         // Restituisce Some(self) se è una variabile
         None
     }
-    fn evaluate(&self, state: &State) -> i32 {
+    fn evaluate(&self, state: &State) -> i64 {
         self.left.evaluate(state) * self.right.evaluate(state)
     }
 }
@@ -108,7 +108,7 @@ impl ArithmeticExpression for Minus {
         // Restituisce Some(self) se è una variabile
         None
     }
-    fn evaluate(&self, state: &State) -> i32 {
+    fn evaluate(&self, state: &State) -> i64 {
         self.left.evaluate(state) - self.right.evaluate(state)
     }
 }
@@ -128,7 +128,7 @@ impl ArithmeticExpression for Uminus {
         // Restituisce Some(self) se è una variabile
         None
     }
-    fn evaluate(&self, state: &State) -> i32 {
+    fn evaluate(&self, state: &State) -> i64 {
         -self.right.evaluate(state)
     }
 }
@@ -150,7 +150,7 @@ impl ArithmeticExpression for Divide {
         // Restituisce Some(self) se è una variabile
         None
     }
-    fn evaluate(&self, state: &State) -> i32 {
+    fn evaluate(&self, state: &State) -> i64 {
         self.left.evaluate(state) / self.right.evaluate(state)
     }
 }

@@ -6,7 +6,7 @@ use std::fmt::Debug;
 #[derive(Clone)]
 pub enum TokenType {
     // Numeri
-    Number(i32),
+    Number(i64),
 
     // Variabili (identificatori)
     Identifier(String),
@@ -242,7 +242,7 @@ impl Lexer {
     }
 
     // Consuma numeri
-    fn consume_number(&mut self) -> i32 {
+    fn consume_number(&mut self) -> i64 {
         let mut number_str = String::new();
         while let Some(c) = self.current_char() {
             if c.is_digit(10) {
@@ -252,7 +252,7 @@ impl Lexer {
                 break;
             }
         }
-        number_str.parse::<i32>().unwrap()
+        number_str.parse::<i64>().unwrap()
     }
 
     // Consuma identificatori o parole chiave

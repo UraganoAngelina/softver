@@ -4,4 +4,4 @@ pub mod statement;
 
 
 use std::collections::HashMap;
-pub type State = HashMap<String, i32>;
+pub type State = HashMap<String, i64>;
