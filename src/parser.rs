@@ -1589,17 +1589,22 @@ pub fn parse_for_block(
         }
     })?;
 
+   
     // Parsing del blocco di incremento (INCREMENT) come Statement
-    let mut increment_any_vec = AnyVec { nodes: increment_vec.nodes };
-    let mut increment_index = 0;
-    parse_statement(&mut increment_any_vec, &mut increment_index);
+    let increment_any_vec = AnyVec { nodes: increment_vec.nodes };
     let increment = increment_any_vec.nodes.into_iter().find_map(|node| {
         if let Any::Statement(stmt) = node {
-            Some(stmt)
+            // Verifica se si tratta del tipo PlusPlus
+            if let Some(plusplus) = stmt.as_any().downcast_ref::<PlusPlus>() {
+                Some(plusplus.clone_box())
+            } else {
+                None
+            }
         } else {
             None
         }
     })?;
+    
     // Debugging
     println!("PARSE SUB VEC FOR POST CYCLE PRINTING");
     for (i, node) in sub_any_vec.nodes.iter().enumerate() {

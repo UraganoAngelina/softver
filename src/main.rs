@@ -8,8 +8,8 @@ use std::path::Path;
 
 fn main() {    
     //test file path
-    let program_file_path = Path::new("/home/alberto/Desktop/softver/src/test/factorial");
-    let state_file_path = Path::new("/home/alberto/Desktop/softver/src/test/factorialState");
+    let program_file_path = Path::new("/home/alberto/Desktop/softver/src/test/ifTest");
+    let state_file_path = Path::new("/home/alberto/Desktop/softver/src/test/ifState");
     
     //read from the file
     let contents = fs::read_to_string(program_file_path)

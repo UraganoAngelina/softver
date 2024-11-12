@@ -1,10 +1,12 @@
 use crate::ast::State;
 use std::fmt::Debug;
+//use std::any::Any;
 
 pub trait ArithmeticExpression: Debug {
     fn clone_box(&self) -> Box<dyn ArithmeticExpression>;
     fn as_variable(&self) -> Option<&Variable>;
     fn evaluate(&self, state: &State) -> i64;
+    //fn as_any(&self) -> &dyn Any;
 
     // Aggiungi to_string al trait
     fn to_string(&self) -> String;
@@ -14,6 +16,9 @@ pub trait ArithmeticExpression: Debug {
 pub struct Numeral(pub i64);
 
 impl ArithmeticExpression for Numeral {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Numeral(self.0))
     }
@@ -34,6 +39,9 @@ pub struct Variable {
 }
 
 impl ArithmeticExpression for Variable {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Variable {
             value: self.value.clone(),
@@ -57,6 +65,9 @@ pub struct Add {
 }
 
 impl ArithmeticExpression for Add {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Add {
             left: self.left.clone_box(),
@@ -81,6 +92,9 @@ pub struct Product {
 }
 
 impl ArithmeticExpression for Product {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Product {
             left: self.left.clone_box(),
@@ -105,6 +119,9 @@ pub struct Minus {
 }
 
 impl ArithmeticExpression for Minus {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Minus {
             left: self.left.clone_box(),
@@ -128,6 +145,9 @@ pub struct Uminus {
 }
 
 impl ArithmeticExpression for Uminus {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Uminus {
             right: self.right.clone_box(),
@@ -151,6 +171,9 @@ pub struct Divide {
 }
 
 impl ArithmeticExpression for Divide {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Divide {
             left: self.left.clone_box(),

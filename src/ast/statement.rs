@@ -1,11 +1,13 @@
 use crate::ast::State;
 use crate::ast::{arithmetic::*, boolean::*};
+use std::any::Any;
 use std::fmt::Debug;
 
 
 pub trait Statement: Debug {
     fn clone_box(&self) -> Box<dyn Statement>;
     fn evaluate(&self, state: &mut State) -> State;
+    fn as_any(&self) -> &dyn Any;
 }
 
 #[derive(Debug)]
@@ -15,6 +17,9 @@ pub struct Assign {
 }
 
 impl Statement for Assign {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(Assign {
             var_name: self.var_name.clone_box(),
@@ -39,6 +44,9 @@ impl Statement for Assign {
 pub struct Skip;
 
 impl Statement for Skip {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(Skip {})
     }
@@ -55,6 +63,9 @@ pub struct Concat {
 }
 
 impl Statement for Concat {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(Concat {
             first: self.first.clone_box(),
@@ -82,6 +93,9 @@ pub struct IfThenElse {
 }
 
 impl Statement for IfThenElse {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(IfThenElse {
             guard: self.guard.clone_box(),
@@ -116,6 +130,9 @@ pub struct While {
 }
 
 impl Statement for While {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(While {
             guard: self.guard.clone_box(),
@@ -145,6 +162,9 @@ pub struct For {
 }
 
 impl Statement for For {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(For {
             init: self.init.clone_box(),
@@ -176,6 +196,9 @@ pub struct RepeatUntil {
 }
 
 impl Statement for RepeatUntil {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(RepeatUntil {
             body: self.body.clone_box(),
@@ -203,6 +226,9 @@ pub struct PlusPlus {
     pub var: Box<dyn ArithmeticExpression>,
 }
 impl Statement for PlusPlus {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(PlusPlus {
             var: self.var.clone_box(),
