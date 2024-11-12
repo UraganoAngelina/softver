@@ -963,6 +963,33 @@ pub fn parse_arithmetic_unop(tok_vec: &mut AnyVec, index: &mut usize) {
     while *index < tok_vec.nodes.len() {
         if let Some(Any::Token(token)) = tok_vec.nodes.get(*index) {
             match token.token_ty {
+                TokenType::PlusPlus => {
+                    // Assicurati di avere un token variabile prima di `PlusPlus`
+                    let var_node = tok_vec.nodes.remove(*index - 1); // Estrae il nodo della variabile
+                    let var = match var_node.as_arithmetic_expr() {
+                        Some(expr) => {
+                            if let Some(variable) = expr.as_variable() {
+                                variable
+                            } else {
+                                unreachable!(
+                                    "Errore di parsing: attesa una variabile prima di '++'."
+                                );
+                            }
+                        }
+                        None => {
+                            unreachable!("Errore di parsing: attesa una variabile prima di '++'.")
+                        }
+                    };
+                    //qui ho una variabile prima del token ++
+                    // Crea l'assegnamento `i = i + 1`
+                    let plusp = PlusPlus {
+                        var : var.clone_box(),
+                    };
+    
+                    // Inserisci l'oggetto `Assign` nel vettore di parsing
+                    tok_vec.nodes.insert( *index-1 ,Any::Statement(Box::new(plusp)));   
+                }
+
                 TokenType::Minus => {
                     // Assicurati che non ci sia un operando a sinistra
                     if *index > 0 {
@@ -1725,7 +1752,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
 
                     // Creiamo e inseriamo lo statement di assegnamento
                     let assignment_stmt = Assign {
-                        var_name: var.value.clone(),
+                        var_name: var.clone_box(),
                         expr: expr.clone_box(),
                     };
                     any_vec
@@ -2041,7 +2068,6 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         .nodes
                         .insert(body_start_index, Any::Statement(Box::new(while_stmt)));
                 }
-
                 //TODO Gestione ciclo for
                 TokenType::For => {
                     let (init, guard, increment);

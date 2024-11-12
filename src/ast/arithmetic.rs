@@ -5,6 +5,9 @@ pub trait ArithmeticExpression: Debug {
     fn clone_box(&self) -> Box<dyn ArithmeticExpression>;
     fn as_variable(&self) -> Option<&Variable>;
     fn evaluate(&self, state: &State) -> i64;
+
+    // Aggiungi to_string al trait
+    fn to_string(&self) -> String;
 }
 
 #[derive(Debug)]
@@ -12,14 +15,16 @@ pub struct Numeral(pub i64);
 
 impl ArithmeticExpression for Numeral {
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
-        Box::new(Numeral(self.0)) // Crea un nuovo Box con una copia di Numeral
+        Box::new(Numeral(self.0))
     }
     fn as_variable(&self) -> Option<&Variable> {
-        // Restituisce Some(self) se è una variabile
         None
     }
     fn evaluate(&self, _state: &State) -> i64 {
         self.0
+    }
+    fn to_string(&self) -> String {
+        self.0.to_string()
     }
 }
 
@@ -32,17 +37,16 @@ impl ArithmeticExpression for Variable {
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Variable {
             value: self.value.clone(),
-        }) // Crea un nuovo Box con una copia di Variable
+        })
     }
     fn as_variable(&self) -> Option<&Variable> {
-        // Restituisce Some(self) se è una variabile
         Some(self)
     }
     fn evaluate(&self, state: &State) -> i64 {
-        match state.get(&self.value) {
-            Some(&val) => val,
-            None => panic!("Variabile '{}' non trovata nello stato!", self.value),
-        }
+        *state.get(&self.value).expect("Variabile non trovata!")
+    }
+    fn to_string(&self) -> String {
+        self.value.clone()
     }
 }
 
@@ -57,14 +61,16 @@ impl ArithmeticExpression for Add {
         Box::new(Add {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
-        }) // Crea un nuovo Box con una copia di Product
+        })
     }
     fn as_variable(&self) -> Option<&Variable> {
-        // Restituisce Some(self) se è una variabile
         None
     }
     fn evaluate(&self, state: &State) -> i64 {
         self.left.evaluate(state) + self.right.evaluate(state)
+    }
+    fn to_string(&self) -> String {
+        format!("({} + {})", self.left.to_string(), self.right.to_string())
     }
 }
 
@@ -79,14 +85,16 @@ impl ArithmeticExpression for Product {
         Box::new(Product {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
-        }) // Crea un nuovo Box con una copia di Product
+        })
     }
     fn as_variable(&self) -> Option<&Variable> {
-        // Restituisce Some(self) se è una variabile
         None
     }
     fn evaluate(&self, state: &State) -> i64 {
         self.left.evaluate(state) * self.right.evaluate(state)
+    }
+    fn to_string(&self) -> String {
+        format!("({} * {})", self.left.to_string(), self.right.to_string())
     }
 }
 
@@ -101,15 +109,16 @@ impl ArithmeticExpression for Minus {
         Box::new(Minus {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
-        }) // Crea un nuovo Box con una copia di Minus
+        })
     }
-
     fn as_variable(&self) -> Option<&Variable> {
-        // Restituisce Some(self) se è una variabile
         None
     }
     fn evaluate(&self, state: &State) -> i64 {
         self.left.evaluate(state) - self.right.evaluate(state)
+    }
+    fn to_string(&self) -> String {
+        format!("({} - {})", self.left.to_string(), self.right.to_string())
     }
 }
 
@@ -122,14 +131,16 @@ impl ArithmeticExpression for Uminus {
     fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
         Box::new(Uminus {
             right: self.right.clone_box(),
-        }) // Crea un nuovo Box con una copia di Uminus
+        })
     }
     fn as_variable(&self) -> Option<&Variable> {
-        // Restituisce Some(self) se è una variabile
         None
     }
     fn evaluate(&self, state: &State) -> i64 {
         -self.right.evaluate(state)
+    }
+    fn to_string(&self) -> String {
+        format!("-{}", self.right.to_string())
     }
 }
 
@@ -144,13 +155,15 @@ impl ArithmeticExpression for Divide {
         Box::new(Divide {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
-        }) // Crea un nuovo Box con una copia di Divide
+        })
     }
     fn as_variable(&self) -> Option<&Variable> {
-        // Restituisce Some(self) se è una variabile
         None
     }
     fn evaluate(&self, state: &State) -> i64 {
         self.left.evaluate(state) / self.right.evaluate(state)
+    }
+    fn to_string(&self) -> String {
+        format!("({} / {})", self.left.to_string(), self.right.to_string())
     }
 }
