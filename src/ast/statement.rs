@@ -1,13 +1,13 @@
 use crate::ast::State;
 use crate::ast::{arithmetic::*, boolean::*};
-use std::any::Any;
+//use std::any::Any;
 use std::fmt::Debug;
 
 
 pub trait Statement: Debug {
     fn clone_box(&self) -> Box<dyn Statement>;
     fn evaluate(&self, state: &mut State) -> State;
-    fn as_any(&self) -> &dyn Any;
+    //fn as_any(&self) -> &dyn Any;
 }
 
 #[derive(Debug)]
@@ -17,9 +17,9 @@ pub struct Assign {
 }
 
 impl Statement for Assign {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(Assign {
             var_name: self.var_name.clone_box(),
@@ -44,9 +44,9 @@ impl Statement for Assign {
 pub struct Skip;
 
 impl Statement for Skip {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(Skip {})
     }
@@ -63,9 +63,9 @@ pub struct Concat {
 }
 
 impl Statement for Concat {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(Concat {
             first: self.first.clone_box(),
@@ -76,7 +76,7 @@ impl Statement for Concat {
     fn evaluate(&self, state: &mut State) -> State {
         let mut state_after_first = self.first.evaluate(state);
         println!("state after first {:?}", state_after_first);
-        let state_after_second = self.second.evaluate(&mut state_after_first); // Valuta il secondo statement con lo stato aggiornato e restituisce il risultato finale
+        let state_after_second = self.second.evaluate(&mut state_after_first); 
         println!("state after second {:?}", state_after_second);
         //state.clear();
         state.extend(state_after_second.clone());
@@ -93,9 +93,9 @@ pub struct IfThenElse {
 }
 
 impl Statement for IfThenElse {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(IfThenElse {
             guard: self.guard.clone_box(),
@@ -130,9 +130,9 @@ pub struct While {
 }
 
 impl Statement for While {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(While {
             guard: self.guard.clone_box(),
@@ -142,14 +142,14 @@ impl Statement for While {
 
     fn evaluate(&self, state: &mut State) -> State {
         let mut current_state = state.clone();
-        while self.guard.evaluate(&current_state) {
+        while self.guard.evaluate(& mut current_state) {
             current_state = self.body.evaluate(&mut current_state);
             println!("while body current state: {:?}", current_state);
         }
         //state.clear();
         state.extend(current_state.clone());
         println!("Extended state after while eval: {:?}", state);
-        current_state // Restituisce lo stato dopo l'uscita dal ciclo
+        state.clone()
     }
 }
 
@@ -157,14 +157,15 @@ impl Statement for While {
 pub struct For {
     pub init: Box<dyn Statement>,
     pub guard: Box<dyn BooleanExpression>,
-    pub increment: Box<dyn Statement>,
+    pub increment: Box<dyn ArithmeticExpression>,
     pub body: Box<dyn Statement>,
 }
 
 impl Statement for For {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(For {
             init: self.init.clone_box(),
@@ -174,20 +175,28 @@ impl Statement for For {
         })
     }
 
-    fn evaluate(&self, state: &mut State) -> State {
-        let mut current_state = self.init.evaluate(state); // Esegue l'inizializzazione
-        while self.guard.evaluate(&current_state) {
-            current_state = self.body.evaluate(&mut current_state);
-            println!("for body: {:?}", current_state);
-            current_state = self.increment.evaluate(&mut current_state);
-            println!("for increment: {:?}", current_state);
+    fn evaluate(&self, state: &mut State) -> State{
+        // Inizializzazione
+        println!("State before init: {:?}", state);
+        self.init.evaluate(state);
+        println!("State after init: {:?}", state);
+
+        // Ciclo
+        while self.guard.evaluate(state) {
+            println!("State before body: {:?}", state);
+            self.body.evaluate(state);
+            println!("State after body: {:?}", state);
+
+            // Incremento: aggiorna lo stato e ignora il valore restituito
+            let _ = self.increment.evaluate(state); // Lo stato è già aggiornato da PlusPlus
+            println!("State after increment: {:?}", state);
         }
-        //state.clear();
-        state.extend(current_state.clone());
-        println!("Extended state after for eval: {:?}", state);
-        current_state // Restituisce lo stato dopo il ciclo
+
+        println!("Final state after for eval: {:?}", state);
+        state.clone()
     }
 }
+
 
 #[derive(Debug)]
 pub struct RepeatUntil {
@@ -196,9 +205,9 @@ pub struct RepeatUntil {
 }
 
 impl Statement for RepeatUntil {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
     fn clone_box(&self) -> Box<dyn Statement> {
         Box::new(RepeatUntil {
             body: self.body.clone_box(),
@@ -211,7 +220,7 @@ impl Statement for RepeatUntil {
         loop {
             current_state = self.body.evaluate(&mut current_state);
             println!("repeat until body current state: {:?}", current_state);
-            if self.guard.evaluate(&current_state) {
+            if self.guard.evaluate(& mut current_state) {
                 break;
             }
         }
@@ -221,30 +230,4 @@ impl Statement for RepeatUntil {
         current_state // Restituisce lo stato finale
     }
 }
-#[derive(Debug)]
-pub struct PlusPlus {
-    pub var: Box<dyn ArithmeticExpression>,
-}
-impl Statement for PlusPlus {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-    fn clone_box(&self) -> Box<dyn Statement> {
-        Box::new(PlusPlus {
-            var: self.var.clone_box(),
-        })
-    }
-    fn evaluate(&self, state: &mut State) -> State {
-        //Variable evaluation -> i64
-        let mut value = self.var.evaluate(state);
-        println!(
-            "value in assign eval {:?}, for var {:?}",
-            value,
-            self.var.clone_box()
-        );
-        value+=1;
-        state.insert(self.var.clone_box().to_string(), value);
-        println!("state after assign insertion: {:?}", state);
-        state.clone() // Restituisce lo stato aggiornato
-    }
-}
+

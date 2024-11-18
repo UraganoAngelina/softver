@@ -987,7 +987,7 @@ pub fn parse_arithmetic_unop(tok_vec: &mut AnyVec, index: &mut usize) {
                     };
     
                     // Inserisci l'oggetto `Assign` nel vettore di parsing
-                    tok_vec.nodes.insert( *index-1 ,Any::Statement(Box::new(plusp)));   
+                    tok_vec.nodes.insert( *index-1 ,Any::ArithmeticExpression(Box::new(plusp)));   
                 }
 
                 TokenType::Minus => {
@@ -1410,6 +1410,87 @@ pub fn parse_arithmetic_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                     //elimino il token contenente l'operatore *
                     tok_vec.nodes.remove(*index);
                 }
+                TokenType::Divide => {
+                    // Prima del `/` si trova l'operando sinistro (left)
+                    if *index == 0 {
+                        unreachable!(
+                            "Errore di parsing: operando sinistro mancante per la divisione."
+                        );
+                    }
+                    let left_node = tok_vec.nodes.remove(*index - 1);
+
+                    //println!("left operand {:?}" , left_node);
+
+                    let left = match left_node {
+                        Any::ArithmeticExpression(expr) => expr,
+                        _ => unreachable!(
+                            "Errore di parsing: attesa espressione aritmetica a sinistra del '/'."
+                        ),
+                    };
+
+                    // println!("printing the token vector after the left elimination");
+                    // let mut j = 0;
+                    // while j < tok_vec.nodes.len() {
+                    //     println!("{:?}", tok_vec.nodes[j]);
+                    //     j = j + 1;
+                    // }
+
+                    // Dopo il `/`, cerca l'operando destro
+                    if *index >= tok_vec.nodes.len() {
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per la divisione."
+                        );
+                    }
+                    //println!("second print index:= {}" , index);
+
+                    // Se trovi una parentesi aperta, esegui parse_subexpression
+
+                    let right = if let Some(node) = tok_vec.nodes.get(*index) {
+                        match node {
+                            Any::Token(token) => {
+                                if let TokenType::Bra = token.token_ty {
+                                    //println!("parsed by recursion right expression {:?}", parse_subexpression(tok_vec, index));
+                                    parse_arithmetic_subexpression(tok_vec, index)
+                                } else {
+                                    // Token is not a parenthesis, check if it's a valid arithmetic expression
+                                    let right_node = tok_vec.nodes.remove(*index);
+                                    //println!("parsed right operand {:?}", right_node);
+                                    match right_node {
+                                        Any::ArithmeticExpression(expr) => expr,
+                                        _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '/'."),
+                                    }
+                                }
+                            }
+                            //caso in cui ho già un ArithmeticExpression a dx
+                            Any::ArithmeticExpression(_expr) => {
+                                let right_node = tok_vec.nodes.remove(*index);
+                                //println!("parsed right operand {:?}", right_node);
+                                match right_node {
+                                        Any::ArithmeticExpression(expr) => expr,
+                                        _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra del '/'."),
+                                    }
+                            }
+                            _ => {
+                                unreachable!(
+                                    "Errore di parsing: nodo non riconosciuto a destra del '/'."
+                                )
+                            }
+                        }
+                    } else {
+                        unreachable!("Errore di parsing: nessun token trovato a destra del '/'.");
+                    };
+
+                    // Crea l'oggetto Divide con left e right
+                    let div_expr = Divide { left, right };
+
+                    // Reinserisci l'oggetto Add nel vettore come ArithmeticExpression
+                    tok_vec
+                        .nodes
+                        .insert(*index - 1, Any::ArithmeticExpression(Box::new(div_expr)));
+
+                    //elimino il token contenente l'operatore *
+                    tok_vec.nodes.remove(*index);
+                }
 
                 _ => {}
             }
@@ -1521,7 +1602,7 @@ pub fn parse_for_block(
 ) -> Option<(
     Box<dyn Statement>,
     Box<dyn BooleanExpression>,
-    Box<dyn Statement>,
+    Box<dyn ArithmeticExpression>,
 )> {
     
     let mut itindex = index.clone();
@@ -1593,7 +1674,7 @@ pub fn parse_for_block(
     // Parsing del blocco di incremento (INCREMENT) come Statement
     let increment_any_vec = AnyVec { nodes: increment_vec.nodes };
     let increment = increment_any_vec.nodes.into_iter().find_map(|node| {
-        if let Any::Statement(stmt) = node {
+        if let Any::ArithmeticExpression(stmt) = node {
             // Verifica se si tratta del tipo PlusPlus
             if let Some(plusplus) = stmt.as_any().downcast_ref::<PlusPlus>() {
                 Some(plusplus.clone_box())

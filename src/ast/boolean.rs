@@ -5,7 +5,7 @@ use std::fmt::Debug;
 
 pub trait BooleanExpression: Debug {
     fn clone_box(&self) -> Box<dyn BooleanExpression>;
-    fn evaluate(&self, state: &State) -> bool;
+    fn evaluate(&self, state: & mut State) -> bool;
     //fn as_any(&self) -> &dyn Any;
 }
 
@@ -19,7 +19,7 @@ impl BooleanExpression for Boolean {
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(Boolean(self.0)) // Crea un nuovo Box con una copia di Numeral
     }
-    fn evaluate(&self, _state: &State) -> bool {
+    fn evaluate(&self, _state: & mut State) -> bool {
         self.0
     }
 }
@@ -40,7 +40,7 @@ impl BooleanExpression for Equal {
             right: self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &State) -> bool {
+    fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) == self.right.evaluate(state)
     }
 }
@@ -61,7 +61,7 @@ impl BooleanExpression for GreatEqual {
             right:self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &State) -> bool {
+    fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) >= self.right.evaluate(state)
     }
 }
@@ -80,7 +80,7 @@ impl BooleanExpression for Great {
             right:self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &State) -> bool {
+    fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) > self.right.evaluate(state)
     }
 }
@@ -101,7 +101,7 @@ impl BooleanExpression for LessEqual {
             right:self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &State) -> bool {
+    fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) <= self.right.evaluate(state)
     }
 }
@@ -122,7 +122,7 @@ impl BooleanExpression for Less {
             right:self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &State) -> bool {
+    fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) < self.right.evaluate(state)
     }
 }
@@ -143,7 +143,7 @@ impl BooleanExpression for And {
             right:self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &State) -> bool {
+    fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) && self.right.evaluate(state)
     }
 }
@@ -164,7 +164,7 @@ impl BooleanExpression for Or {
             right:self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &State) -> bool {
+    fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) || self.right.evaluate(state)
     }
 }
@@ -183,7 +183,7 @@ impl BooleanExpression for Not {
             expression:self.expression.clone_box(),
         })
     }
-    fn evaluate(&self, state: &State) -> bool {
+    fn evaluate(&self, state: &mut State) -> bool {
         !(self.expression.evaluate(state))
     }
 }
