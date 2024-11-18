@@ -63,10 +63,10 @@ impl Display for TokenVec {
 
 #[derive(Debug)]
 pub enum Any {
-    BooleanExpression(Box<dyn BooleanExpression>), // Memorizzo i tipi che implementano BooleanExpression
-    ArithmeticExpression(Box<dyn ArithmeticExpression>), // Memorizzo i tipi che implementano ArithmeticExpression
-    Statement(Box<dyn Statement>), // Memorizzo i tipi che implementano Statement
-    Token(Token),                  // Memorizzo i token direttamente
+    BooleanExpression(Box<dyn BooleanExpression>), 
+    ArithmeticExpression(Box<dyn ArithmeticExpression>), 
+    Statement(Box<dyn Statement>), 
+    Token(Token),               
 }
 
 impl Any {
