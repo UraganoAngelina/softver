@@ -1,6 +1,7 @@
 mod ast;
 mod parser;
 pub mod lexer;
+mod abstract_domain;
 
 use std::fs;
 use std::path::Path;
