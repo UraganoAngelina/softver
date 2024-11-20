@@ -7,7 +7,7 @@ use crate::ast;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenType;
-
+use crate::abstract_domain;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -2367,6 +2367,8 @@ pub fn analyze(program: String, initial_state: String) {
     // evaluate the final statement
     let mut state = ast::State::new();
 
+    let mut abs_state = abstract_domain::AbstractState::new();
+    
     if let Some(last_node) = state_vec.nodes.last(){
         if let Some(statement) = last_node.as_statement(){
             statement.evaluate(& mut state);

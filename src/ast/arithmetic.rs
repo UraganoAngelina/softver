@@ -1,3 +1,4 @@
+use crate::abstract_domain::{AbstractInterval, AbstractState};
 use crate::ast::State;
 use std::fmt::Debug;
 use std::any::Any;
@@ -8,8 +9,9 @@ pub trait ArithmeticExpression: Debug {
     fn evaluate(&self, state: & mut State) -> i64;
     fn as_any(&self) -> &dyn Any;
 
-    // Aggiungi to_string al trait
+    
     fn to_string(&self) -> String;
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>;
 }
 
 #[derive(Debug)]
@@ -31,6 +33,9 @@ impl ArithmeticExpression for Numeral {
     fn to_string(&self) -> String {
         self.0.to_string()
     }
+    fn abs_evaluate(&self, _abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        AbstractInterval::new(self.0, self.0)
+    }
 }
 
 #[derive(Debug)]
@@ -51,10 +56,13 @@ impl ArithmeticExpression for Variable {
         Some(self)
     }
     fn evaluate(&self, state: & mut State) -> i64 {
-        *state.get(&self.value).expect("Variabile non trovata!")
+        *state.get(&self.value).expect("Variabile non trovata nello stato!")
     }
     fn to_string(&self) -> String {
         self.value.clone()
+    }
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        *abs_state.get(&self.value).expect("Variabile non trovata nello stato astratto!")
     }
 }
 
@@ -83,6 +91,9 @@ impl ArithmeticExpression for Add {
     fn to_string(&self) -> String {
         format!("({} + {})", self.left.to_string(), self.right.to_string())
     }
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        self.left.abs_evaluate(abs_state) + self.right.abs_evaluate(abs_state)
+    }
 }
 
 #[derive(Debug)]
@@ -109,6 +120,9 @@ impl ArithmeticExpression for Product {
     }
     fn to_string(&self) -> String {
         format!("({} * {})", self.left.to_string(), self.right.to_string())
+    }
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        self.left.abs_evaluate(abs_state) * self.right.abs_evaluate(abs_state)
     }
 }
 
@@ -137,6 +151,9 @@ impl ArithmeticExpression for Minus {
     fn to_string(&self) -> String {
         format!("({} - {})", self.left.to_string(), self.right.to_string())
     }
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        self.left.abs_evaluate(abs_state) - self.right.abs_evaluate(abs_state)
+    }
 }
 
 #[derive(Debug)]
@@ -161,6 +178,9 @@ impl ArithmeticExpression for Uminus {
     }
     fn to_string(&self) -> String {
         format!("-{}", self.right.to_string())
+    }
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        -self.right.abs_evaluate(abs_state)
     }
 }
 
@@ -189,11 +209,22 @@ impl ArithmeticExpression for Divide {
             self.left.evaluate(state) / self.right.evaluate(state)
         }
         else {
-            unreachable!("**RUNTIME ERROR, division by zero found**")
+            unreachable!("**RUNTIME ERROR, division by zero found while applying denotational semantics**")
         }
     }
     fn to_string(&self) -> String {
         format!("({} / {})", self.left.to_string(), self.right.to_string())
+    }
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        let zero_int = AbstractInterval::new(0, 0);
+        if self.right.abs_evaluate(abs_state) != zero_int
+        {
+            self.left.abs_evaluate(abs_state) / self.right.abs_evaluate(abs_state)
+        }
+        else {
+            unreachable!("**RUNTIME ERROR, division by zero found while abstract interpreting**")
+        }
+        
     }
 }
 
@@ -228,5 +259,19 @@ impl ArithmeticExpression for PlusPlus {
     }
     fn to_string(&self) -> String {
         format!("{}", self.var.to_string())
+    }
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        let  value = self.var.abs_evaluate(abs_state);
+        match value {
+            AbstractInterval::Bottom => AbstractInterval::Bottom,
+            AbstractInterval::Top => AbstractInterval::Top,
+            AbstractInterval::Bounded { lower, upper } => {
+                
+                let newupper = upper+1;
+                let new_interval=AbstractInterval::new(lower, newupper);
+                abs_state.insert(self.var.to_string(), new_interval);
+                new_interval
+            }
+        }
     }
 }
