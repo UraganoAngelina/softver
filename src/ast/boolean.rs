@@ -1,26 +1,33 @@
+use crate::abstract_state::AbstractState;
+use crate::abstract_domain::AbstractInterval;
 use crate::ast::arithmetic::ArithmeticExpression;
 use crate::ast::State;
+use std::collections::HashMap;
 use std::fmt::Debug;
-//use std::any::Any;
 
 pub trait BooleanExpression: Debug {
     fn clone_box(&self) -> Box<dyn BooleanExpression>;
     fn evaluate(&self, state: & mut State) -> bool;
-    //fn as_any(&self) -> &dyn Any;
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState;
 }
 
 #[derive(Debug)]
 pub struct Boolean(pub bool);
 
 impl BooleanExpression for Boolean {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(Boolean(self.0)) // Crea un nuovo Box con una copia di Numeral
     }
     fn evaluate(&self, _state: & mut State) -> bool {
         self.0
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState
+    {
+        if self.0  {
+            state.clone()
+        } else {
+            AbstractState::bottom(state.clone())
+        }
     }
 }
 
@@ -31,9 +38,6 @@ pub struct Equal {
 }
 
 impl BooleanExpression for Equal {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(Equal {
             left: self.left.clone_box(),
@@ -42,6 +46,21 @@ impl BooleanExpression for Equal {
     }
     fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) == self.right.evaluate(state)
+    }
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+        if state.is_bottom() {
+            return AbstractState::bottom(state.clone());
+        }
+
+        let left_eval = self.left.abs_evaluate(state);
+        let right_eval = self.right.abs_evaluate(state);
+
+        if left_eval == right_eval{
+            state.clone()
+        }
+        else {
+            AbstractState::bottom(state.clone())
+        }
     }
 }
 
@@ -52,9 +71,6 @@ pub struct GreatEqual {
 }
 
 impl BooleanExpression for GreatEqual {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(GreatEqual{
             left:self.left.clone_box(),
@@ -64,6 +80,31 @@ impl BooleanExpression for GreatEqual {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) >= self.right.evaluate(state)
     }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        if state.is_bottom() {
+             AbstractState::bottom(state.clone());
+        }
+        let left_eval = self.left.abs_evaluate(state);
+        let right_eval = self.right.abs_evaluate(state);
+        match (left_eval, right_eval) {
+            (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => AbstractState::bottom(state.clone()),
+
+        (AbstractInterval::Bounded { lower: l1, upper: u1 }, 
+        AbstractInterval::Bounded { lower: l2, upper: u2 }) => {
+                if l1 >= u2 {
+                    // Tutti i valori del lhs sono >= rhs
+                    state.clone() // Stato invariato, true (`tt`)
+                } else if u1 < l2 {
+                    // Tutti i valori del lhs sono < rhs
+                    AbstractState::bottom(state.clone()) // False (`⊥`)
+                } else {
+                    // Gli intervalli si sovrappongono
+                    AbstractState::new() 
+                }
+            }
+            _ => AbstractState::new(), 
+        }
+    }
 }
 #[derive(Debug)]
 pub struct Great {
@@ -71,9 +112,6 @@ pub struct Great {
     pub right: Box<dyn ArithmeticExpression>,
 }
 impl BooleanExpression for Great {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(Great{
             left:self.left.clone_box(),
@@ -82,6 +120,28 @@ impl BooleanExpression for Great {
     }
     fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) > self.right.evaluate(state)
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        if state.is_bottom() {
+            AbstractState::bottom(state.clone());
+       }
+       let left_eval = self.left.abs_evaluate(state);
+       let right_eval = self.right.abs_evaluate(state);
+       match (left_eval, right_eval) {
+           (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => AbstractState::bottom(state.clone()),
+
+       (AbstractInterval::Bounded { lower: l1, upper: u1 }, 
+       AbstractInterval::Bounded { lower: l2, upper: u2 }) => {
+               if l1 > u2 {
+                   state.clone() 
+               } else if u1 <= l2 {
+                   AbstractState::bottom(state.clone()) 
+               } else {
+                   AbstractState::new() 
+               }
+           }
+           _ => AbstractState::new(), 
+       }
     }
 }
 
@@ -92,9 +152,6 @@ pub struct LessEqual {
 }
 
 impl BooleanExpression for LessEqual {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(LessEqual{
             left:self.left.clone_box(),
@@ -103,6 +160,28 @@ impl BooleanExpression for LessEqual {
     }
     fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) <= self.right.evaluate(state)
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        if state.is_bottom() {
+            AbstractState::bottom(state.clone());
+       }
+       let left_eval = self.left.abs_evaluate(state);
+       let right_eval = self.right.abs_evaluate(state);
+       match (left_eval, right_eval) {
+           (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => AbstractState::bottom(state.clone()),
+
+       (AbstractInterval::Bounded { lower: l1, upper: u1 }, 
+       AbstractInterval::Bounded { lower: l2, upper: u2 }) => {
+               if l1 <= u2 {
+                   state.clone() 
+               } else if u1 > l2 {
+                   AbstractState::bottom(state.clone()) 
+               } else {
+                   AbstractState::new() 
+               }
+           }
+           _ => AbstractState::new(), 
+       }
     }
 }
 
@@ -113,9 +192,6 @@ pub struct Less {
 }
 
 impl BooleanExpression for Less {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(Less{
             left:self.left.clone_box(),
@@ -124,6 +200,28 @@ impl BooleanExpression for Less {
     }
     fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) < self.right.evaluate(state)
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        if state.is_bottom() {
+            AbstractState::bottom(state.clone());
+       }
+       let left_eval = self.left.abs_evaluate(state);
+       let right_eval = self.right.abs_evaluate(state);
+       match (left_eval, right_eval) {
+           (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => AbstractState::bottom(state.clone()),
+
+       (AbstractInterval::Bounded { lower: l1, upper: u1 }, 
+       AbstractInterval::Bounded { lower: l2, upper: u2 }) => {
+               if l1 < u2 {
+                   state.clone() 
+               } else if u1 >= l2 {
+                   AbstractState::bottom(state.clone()) 
+               } else {
+                   AbstractState::new() 
+               }
+           }
+           _ => AbstractState::new(), 
+       }
     }
 }
 
@@ -134,9 +232,6 @@ pub struct And {
 }
 
 impl BooleanExpression for And {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(And{
             left:self.left.clone_box(),
@@ -146,7 +241,38 @@ impl BooleanExpression for And {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) && self.right.evaluate(state)
     }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+       let left_eval = self.left.abs_evaluate(state);
+       let right_eval = self.right.abs_evaluate(state);
+
+       if left_eval.is_bottom || right_eval.is_bottom 
+        {
+            return AbstractState::bottom(state.clone());
+        }
+        let mut new_variables = HashMap::new();
+
+        for key in left_eval.variables.keys().chain(right_eval.variables.keys()) {
+            // retrieve the left and right interval from the state
+            let left_interval = left_eval.variables.get(key);
+            let right_interval = right_eval.variables.get(key);
+            //combine them using the interval intersection
+            let intersec_interval = match (left_interval, right_interval) {
+                (Some(l), Some(r)) => l.intersect(r),
+                (Some(l), None) => l.clone(),
+                (None, Some(r)) => r.clone(),
+                (None, None) => AbstractInterval::Top, 
+            };
+
+            new_variables.insert(key.clone(), intersec_interval);
+        }
+
+        AbstractState {
+            is_bottom: false,
+            variables: new_variables,
+        }
+    }
 }
+
 
 #[derive(Debug)]
 pub struct Or {
@@ -155,9 +281,6 @@ pub struct Or {
 }
 
 impl BooleanExpression for Or {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(Or{
             left:self.left.clone_box(),
@@ -167,6 +290,33 @@ impl BooleanExpression for Or {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) || self.right.evaluate(state)
     }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        let left_eval = self.left.abs_evaluate(state);
+        let right_eval = self.right.abs_evaluate(state);
+
+        if left_eval.is_bottom || right_eval.is_bottom 
+        {
+            return AbstractState::bottom(state.clone());
+        }
+        let mut new_variables = HashMap::new();
+        for key in left_eval.variables.keys().chain(right_eval.variables.keys())
+        {
+            let left_interval = left_eval.variables.get(key);
+            let right_interval = right_eval.variables.get(key);
+
+            let union_interval= match (left_interval, right_interval){
+                (Some(l), Some(r)) => l.union(r),
+                (Some(l) , None) => l.clone(),
+                (None, Some(r)) => r.clone(),
+                (None, None) => AbstractInterval::Top
+            };
+            new_variables.insert(key.clone(), union_interval);
+        }
+        AbstractState{
+            is_bottom: false,
+            variables: new_variables,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -175,9 +325,6 @@ pub struct Not {
 }
 
 impl BooleanExpression for Not {
-    // fn as_any(&self) -> &dyn Any {
-    //     self
-    // }
     fn clone_box(&self) -> Box<dyn BooleanExpression> {
         Box::new(Not{
             expression:self.expression.clone_box(),
@@ -185,5 +332,30 @@ impl BooleanExpression for Not {
     }
     fn evaluate(&self, state: &mut State) -> bool {
         !(self.expression.evaluate(state))
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        let expr_eval=self.expression.abs_evaluate(state);
+
+        if expr_eval.is_bottom
+        {
+            return AbstractState::bottom(state.clone());
+        }
+
+        let mut new_variables=HashMap::new();
+        for key in expr_eval.variables.keys(){
+            let expr_interval = expr_eval.variables.get(key);
+
+            let neg_interval = match expr_interval
+            {
+                Some(i) => -(*i),
+                None => AbstractInterval::Top,
+            };
+
+            new_variables.insert(key.clone(), neg_interval);
+        }
+        AbstractState{
+            is_bottom: false,
+            variables: new_variables,
+        }
     }
 }

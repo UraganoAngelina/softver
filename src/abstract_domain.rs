@@ -1,10 +1,8 @@
 use std::ops::{Add, Sub, Mul, Div, Neg};
+use std::cmp::PartialOrd;
 
 
-use std::collections::HashMap;
-pub type AbstractState = HashMap<String, AbstractInterval<i64>>;
-
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum AbstractInterval<T> {
     Bottom,                  // Stuck configuration
     Top,                     // Lack of information
@@ -57,13 +55,36 @@ where
             }
         }
     }
+    
+}
 
-    /// Controllo se un valore è contenuto nell'intervallo
-    pub fn contains(&self, value: T) -> bool {
-        match self {
-            Self::Bottom => false,
-            Self::Top => true,
-            Self::Bounded { lower, upper } => *lower <= value && value <= *upper,
+impl<T: PartialEq> PartialEq for AbstractInterval<T> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Bottom, Self::Bottom) => true,
+            (Self::Top, Self::Top) => true,
+            (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
+                l1 == l2 && u1 == u2
+            }
+            _ => false,
+        }
+    }
+}
+
+impl<T: PartialOrd> PartialOrd for AbstractInterval<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Self::Bottom, _) | (_, Self::Top) => Some(std::cmp::Ordering::Less),
+            (_, Self::Bottom) | (Self::Top, _) => Some(std::cmp::Ordering::Greater),
+            (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
+                if l1 >= l2 && u1 <= u2 {
+                    Some(std::cmp::Ordering::Less) // `self` è contenuto in `other`
+                } else if l1 <= l2 && u1 >= u2 {
+                    Some(std::cmp::Ordering::Greater) // `other` è contenuto in `self`
+                } else {
+                    None 
+                }
+            }
         }
     }
 }
@@ -158,7 +179,7 @@ where
 {
     type Output = Self;
 
-    fn neg(self) -> Self::Output {
+    fn neg(self) -> AbstractInterval<T> {
         match self {
             AbstractInterval::Bottom => AbstractInterval::Bottom,
             AbstractInterval::Top => AbstractInterval::Top,

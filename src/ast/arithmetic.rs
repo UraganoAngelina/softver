@@ -1,4 +1,5 @@
-use crate::abstract_domain::{AbstractInterval, AbstractState};
+use crate::abstract_domain::AbstractInterval;
+use crate::abstract_state::AbstractState;
 use crate::ast::State;
 use std::fmt::Debug;
 use std::any::Any;
@@ -62,7 +63,7 @@ impl ArithmeticExpression for Variable {
         self.value.clone()
     }
     fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
-        *abs_state.get(&self.value).expect("Variabile non trovata nello stato astratto!")
+        *abs_state.variables.get(&self.value).expect("Variabile non trovata nello stato astratto!")
     }
 }
 
@@ -269,7 +270,7 @@ impl ArithmeticExpression for PlusPlus {
                 
                 let newupper = upper+1;
                 let new_interval=AbstractInterval::new(lower, newupper);
-                abs_state.insert(self.var.to_string(), new_interval);
+                abs_state.variables.insert(self.var.to_string(), new_interval);
                 new_interval
             }
         }

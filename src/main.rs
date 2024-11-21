@@ -2,7 +2,7 @@ mod ast;
 mod parser;
 pub mod lexer;
 mod abstract_domain;
-
+mod abstract_state;
 use std::fs;
 use std::path::Path;
 
