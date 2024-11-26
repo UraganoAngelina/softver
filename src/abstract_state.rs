@@ -113,4 +113,47 @@ impl AbstractState {
             variables: new_variables,
         }
     }
+
+    pub fn state_widening(&self, other : &AbstractState) -> AbstractState {
+         // Se uno dei due stati è Bottom, ritorna l'altro stato (nessuna informazione aggiuntiva)
+         if self.is_bottom {
+            return other.clone();
+        }
+        if other.is_bottom {
+            return self.clone();
+        }
+
+        // Se entrambi sono Top, ritorniamo uno stato Top
+        if self.is_top() || other.is_top() {
+            return AbstractState {
+                is_bottom: false,
+                variables: HashMap::new(), // Top non ha variabili specifiche
+            };
+        }
+
+        let mut new_variables: HashMap<String, AbstractInterval<i64>> = HashMap::new();
+
+        for (key, left_interval) in &self.variables {
+            if let Some(right_interval) = other.variables.get(key) {
+                // Calcoliamo il lub degli intervalli per ogni variabile
+                new_variables.insert(key.clone(), left_interval.int_widening(right_interval));
+            } else {
+                // Se la variabile è presente solo in uno stato, la aggiungiamo comunque
+                new_variables.insert(key.clone(), left_interval.clone());
+            }
+        }
+
+        // Aggiungiamo le variabili che sono solo nell'altro stato
+        for (key, right_interval) in &other.variables {
+            if !self.variables.contains_key(key) {
+                new_variables.insert(key.clone(), right_interval.clone());
+            }
+        }
+
+        // Creiamo il nuovo stato con le variabili unite
+        AbstractState {
+            is_bottom: false, // Lo stato risultante non è Bottom
+            variables: new_variables,
+        }
+    }
 }

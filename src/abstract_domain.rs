@@ -1,3 +1,4 @@
+use num_traits::{Bounded, Zero};
 use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::cmp::PartialOrd;
 
@@ -11,7 +12,7 @@ pub enum AbstractInterval<T> {
 
 impl<T> AbstractInterval<T>
 where
-    T: PartialOrd + Copy + Ord + From<i64> ,
+    T: PartialOrd + Copy + Ord + From<i64> + Bounded + Zero,
 {
     /// Crea un intervallo con estremi definiti
     pub fn new(lower: T, upper: T) -> Self {
@@ -36,6 +37,17 @@ where
         }
     }
 
+    pub fn int_widening( &self ,& other: &Self) -> Self{
+        match (self, other) {
+            (Self::Bottom, x) | (&x, Self::Bottom) => x.clone(),
+            (Self::Top , _) | (_, Self::Top) => Self::Top,
+            (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
+                let new_lower = if l1<= &l2 {*l1} else if l2<=T::zero() && l1< &l2 {T::zero()} else {T::min_value()};
+                let new_upper = if u1 >= &u2 {*u1} else if *u1<=T::zero() && u1 > &u2 {T::zero()} else {T::max_value()};  
+                Self::Bounded { lower: new_lower, upper: new_upper }
+            }
+        }
+    }
     /// Intersezione di due intervalli
     pub fn intersect(&self, other: &Self) -> Self {
         match (self, other) {
