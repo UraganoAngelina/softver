@@ -23,7 +23,7 @@ where
     }
 
     /// Unione di due intervalli
-    pub fn union(&self, other: &Self) -> Self {
+    pub fn int_lub(&self, other: &Self) -> Self {
         match (self, other) {
             (Self::Bottom, x) | (x, Self::Bottom) => x.clone(),
             (Self::Top, _) | (_, Self::Top) => Self::Top,
@@ -53,6 +53,18 @@ where
                     Self::Bottom
                 }
             }
+        }
+    }
+    pub fn is_top(&self) -> bool {
+        match self {
+            Self::Top => true,
+            _ =>  false,
+        }
+    }
+    pub fn is_bottom(&self) -> bool{
+        match self {
+            Self::Top => true,
+            _ => false,
         }
     }
     
@@ -117,11 +129,23 @@ where
             (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom,
             (Self::Top, _) | (_, Self::Top) => Self::Top,
             (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
-                Self::Bounded { lower: l1-l2, upper: u1-u2 }
+                let candidates = [
+                    l1 - l2,
+                    l1 - u2,
+                    u1 - l2,
+                    u1 - u2,
+                ];
+                let new_lower = *candidates.iter().min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+                let new_upper = *candidates.iter().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+                Self::Bounded {
+                    lower: new_lower,
+                    upper: new_upper,
+                }
             }
         }
     }
 }
+
 
 impl<T> Mul for AbstractInterval<T>
 where
@@ -134,11 +158,23 @@ where
             (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom,
             (Self::Top, _) | (_, Self::Top) => Self::Top,
             (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
-                Self::Bounded { lower: l1*l2, upper: u1*u2 }
+                let candidates = [
+                    l1 * l2,
+                    l1 * u2,
+                    u1 * l2,
+                    u1 * u2,
+                ];
+                let new_lower = *candidates.iter().min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+                let new_upper = *candidates.iter().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+                Self::Bounded {
+                    lower: new_lower,
+                    upper: new_upper,
+                }
             }
         }
     }
 }
+
 
 impl<T> Div for AbstractInterval<T>
 where
@@ -155,10 +191,10 @@ where
                     return Self::Bottom; // Errore runtime
                 }
                 let candidates = [
-                    l1 / l2, // entrambi i valori sono positivi o negativi
-                    l1 / u2, // l1 positivo o negativo, u2 positivo
-                    u1 / l2, // u1 positivo o negativo, l2 negativo
-                    u1 / u2, // entrambi i valori positivi
+                    l1 / l2, 
+                    l1 / u2, 
+                    u1 / l2, 
+                    u1 / u2, 
                 ];
 
                 let new_lower = *candidates.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();

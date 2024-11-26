@@ -7,7 +7,6 @@ use crate::{abstract_state, ast};
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenType;
-use crate::abstract_domain;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
