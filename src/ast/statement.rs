@@ -152,7 +152,23 @@ impl Statement for While {
         state.clone()
     }
     fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        todo!()
+        
+        let precondition = state.clone();
+        let  mut current_state = state.clone();
+        let mut prev_state= AbstractState::new();
+
+        loop {
+            prev_state=current_state.clone();
+           let mut guard_result= self.guard.abs_evaluate(&mut prev_state);
+           let mut body_result = self.body.abs_evaluate(& mut guard_result);
+           body_result= body_result.state_widening(&guard_result);
+           current_state= prev_state.state_lub(&body_result);
+           if prev_state == current_state {break};
+        }
+
+        state.variables.extend(current_state.variables.clone());
+        precondition.state_narrowing(&current_state)
+        
     }
 }
 

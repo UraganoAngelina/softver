@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::abstract_domain::AbstractInterval;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AbstractState {
     pub is_bottom: bool, // Indica se lo stato è ⊥ (false)
     pub variables: HashMap<String, AbstractInterval<i64>>, // Variabili astratte
