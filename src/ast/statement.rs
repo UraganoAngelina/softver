@@ -1,11 +1,12 @@
-use crate::ast::State;
-use crate::ast::{arithmetic::*, boolean::*};
+use crate::abstract_state::AbstractState;
+use crate::ast::{arithmetic::*, boolean::*, State};
 use std::fmt::Debug;
 
 
 pub trait Statement: Debug {
     fn clone_box(&self) -> Box<dyn Statement>;
     fn evaluate(&self, state: &mut State) -> State;
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState;
 }
 
 #[derive(Debug)]
@@ -33,6 +34,12 @@ impl Statement for Assign {
         println!("state after assign insertion: {:?}", state);
         state.clone() 
     }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState{
+        let mut new_state = state.clone();
+        let value= self.expr.abs_evaluate(&mut new_state);
+        state.variables.insert(self.var_name.as_variable().unwrap().to_string(), value);
+        state.clone()
+    }
 }
 
 #[derive(Debug)]
@@ -45,6 +52,9 @@ impl Statement for Skip {
 
     fn evaluate(&self, state: &mut State) -> State {
         state.clone() 
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        state.clone()
     }
 }
 
@@ -71,6 +81,11 @@ impl Statement for Concat {
         state.extend(state_after_second.clone());
 
         state_after_second 
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        let new_state= self.second.abs_evaluate(&mut self.first.abs_evaluate(state));
+        state.variables.extend(new_state.variables.clone());
+        new_state
     }
 }
 
@@ -105,6 +120,11 @@ impl Statement for IfThenElse {
             state_after_false
         }
     }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        let then_state = self.guard.abs_evaluate(&mut self.true_expr.abs_evaluate(state));
+        let else_state = self.guard.abs_evaluate(&mut self.false_expr.abs_evaluate(state));
+        return AbstractState::state_lub(&then_state, &else_state);
+    }
 }
 
 #[derive(Debug)]
@@ -130,6 +150,9 @@ impl Statement for While {
         state.extend(current_state.clone());
         println!("Extended state after while eval: {:?}", state);
         state.clone()
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        todo!()
     }
 }
 
@@ -167,6 +190,9 @@ impl Statement for For {
         println!("Final state after for eval: {:?}", state);
         state.clone()
     }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        todo!()
+    }
 }
 
 
@@ -196,6 +222,9 @@ impl Statement for RepeatUntil {
         state.extend(current_state.clone());
         println!("Extended state after repeat until eval: {:?}", state);
         current_state
+    }
+    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+        todo!()
     }
 }
 

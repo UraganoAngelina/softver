@@ -36,14 +36,26 @@ where
             }
         }
     }
-
-    pub fn int_widening( &self ,& other: &Self) -> Self{
+    //widening di due intervalli
+    pub fn int_widening( &self , other: &Self) -> Self{
         match (self, other) {
-            (Self::Bottom, x) | (&x, Self::Bottom) => x.clone(),
+            (Self::Bottom, x) | (x, Self::Bottom) => x.clone(),
             (Self::Top , _) | (_, Self::Top) => Self::Top,
             (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
-                let new_lower = if l1<= &l2 {*l1} else if l2<=T::zero() && l1< &l2 {T::zero()} else {T::min_value()};
+                let new_lower = if l1<= &l2 {*l1} else if *l2<=T::zero() && l1< &l2 {T::zero()} else {T::min_value()};
                 let new_upper = if u1 >= &u2 {*u1} else if *u1<=T::zero() && u1 > &u2 {T::zero()} else {T::max_value()};  
+                Self::Bounded { lower: new_lower, upper: new_upper }
+            }
+        }
+    }
+    //narrowing di due intervalli 
+    pub fn int_narrowing(&self, other: &Self) -> Self{
+        match (self , other) {
+            (Self::Bottom, x) | (x, Self::Bottom) => x.clone(),
+            (Self::Top, x) | (x, Self::Top)=> x.clone(),
+            (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
+                let new_lower = if T::min_value() >= *l1 {*l2} else {*l1};
+                let new_upper = if T::max_value() <= *u1 {*u2} else {*u1};
                 Self::Bounded { lower: new_lower, upper: new_upper }
             }
         }
