@@ -36,6 +36,7 @@ where
             }
         }
     }
+   
     //widening di due intervalli
     pub fn int_widening( &self , other: &Self) -> Self{
         match (self, other) {
@@ -48,6 +49,7 @@ where
             }
         }
     }
+    
     //narrowing di due intervalli 
     pub fn int_narrowing(&self, other: &Self) -> Self{
         match (self , other) {
@@ -60,6 +62,7 @@ where
             }
         }
     }
+    
     /// Intersezione di due intervalli
     pub fn intersect(&self, other: &Self) -> Self {
         match (self, other) {
@@ -92,6 +95,12 @@ where
         }
     }
     
+    pub fn as_bounded_interval(&self) -> Option<AbstractInterval<T>>{
+        match self {
+            AbstractInterval::Bounded { lower: l, upper: u } => Some(AbstractInterval::Bounded { lower: l.clone(), upper: u.clone() }),
+            _ => None
+        }
+    }
 }
 
 impl<T: PartialEq> PartialEq for AbstractInterval<T> {

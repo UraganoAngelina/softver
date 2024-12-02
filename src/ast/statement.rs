@@ -207,7 +207,27 @@ impl Statement for For {
         state.clone()
     }
     fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        todo!()
+        let  precondition = state.clone();
+        let mut prev_state= AbstractState::new();
+        self.init.abs_evaluate(state);
+        let mut current_state= state.clone();
+        loop {
+            prev_state=current_state.clone();
+            let mut exit_result = self.guard.abs_evaluate(&mut prev_state);
+            let mut body_result = self.body.abs_evaluate(&mut exit_result);
+            body_result= body_result.state_widening(&exit_result);
+
+            if let Some(interval) = self.increment.abs_evaluate(&mut body_result).as_bounded_interval() {
+                current_state.update_interval(&self.increment.as_variable().unwrap_or_else(|| unreachable!("Increment expression must resolve to a variable")).to_string(), interval); // Assumendo una variabile da aggiornare
+            }
+            current_state = prev_state.state_lub(&body_result);
+            if prev_state == current_state {
+                break;
+            }
+        }
+        state.variables.extend(current_state.variables.clone());
+        precondition.state_narrowing(&current_state)
+
     }
 }
 
@@ -240,7 +260,20 @@ impl Statement for RepeatUntil {
         current_state
     }
     fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        todo!()
+        let  precondition = state.clone();
+        let mut prev_state= AbstractState::new();
+        let mut current_state= state.clone();
+
+        loop {
+            prev_state=current_state.clone();
+            let mut body_result = self.body.abs_evaluate(&mut prev_state);
+            let guard_result = self.guard.abs_evaluate(&mut body_result);
+            body_result=body_result.state_widening(&guard_result);
+            current_state = prev_state.state_lub(&body_result);
+            if prev_state == current_state {break}
+        }
+        state.variables.extend(current_state.variables.clone());
+        precondition.state_narrowing(&current_state)
     }
 }
 

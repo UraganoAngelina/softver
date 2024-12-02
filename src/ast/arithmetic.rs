@@ -256,7 +256,7 @@ impl ArithmeticExpression for PlusPlus {
         value
     }
     fn as_variable(&self) -> Option<&Variable> {
-        None
+        self.var.as_variable()
     }
     fn to_string(&self) -> String {
         format!("{}", self.var.to_string())
