@@ -2370,18 +2370,18 @@ pub fn analyze(program: String, initial_state: String) {
     
     if let Some(last_node) = state_vec.nodes.last(){
         if let Some(statement) = last_node.as_statement(){
-            statement.evaluate(& mut state);
+            statement.abs_evaluate(& mut abs_state);
         }
     }
-    println!("state printing after state evaluation {:?}" , state);
+    println!("state printing after state evaluation {:?}" , abs_state);
 
     println!("any_vec last node {:?}", any_vec.nodes.last());
     if let Some(last_node) = any_vec.nodes.last(){
         if let Some(statement) = last_node.as_statement(){
-            statement.evaluate(& mut state);
+            statement.abs_evaluate(& mut abs_state);
         }
     }
 
-    println!("state printing after code evaluation {:?}" , state);
+    println!("state printing after code evaluation {:?}" , abs_state);
     //occhio al caso angeli degli spazi cancellati: 10- -10
 }

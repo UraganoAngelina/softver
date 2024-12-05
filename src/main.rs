@@ -9,8 +9,8 @@ use std::path::Path;
 
 fn main() {    
     //test file path
-    let program_file_path = Path::new("/home/alberto/Desktop/softver/src/test/infiniteLoop");
-    let state_file_path = Path::new("/home/alberto/Desktop/softver/src/test/infiniteState");
+    let program_file_path = Path::new("/home/alberto/Desktop/softver/src/test/factorial");
+    let state_file_path = Path::new("/home/alberto/Desktop/softver/src/test/factorialState");
     
     //read from the file
     let contents = fs::read_to_string(program_file_path)
