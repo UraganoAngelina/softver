@@ -30,6 +30,7 @@ impl Display for TokenVec {
                 TokenType::Less => "Less(<)".to_string(),
                 TokenType::Greater => "Greater(>)".to_string(),
                 TokenType::GreatEqual => "GreatEqual(>=)".to_string(),
+                TokenType::NotEqual => "NotEqual(!=)".to_string(),
                 TokenType::Equal => "Equal(=)".to_string(),
                 TokenType::And => "And(&&)".to_string(),
                 TokenType::Or => "Or(||)".to_string(),
@@ -723,6 +724,81 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                         .insert(*index - 1, Any::BooleanExpression(Box::new(leq_expr)));
 
                     //elimino il token contenente l'operatore <=
+                    tok_vec.nodes.remove(*index);
+                }
+                TokenType::NotEqual => {
+                    // Prima del < si trova l'operando sinistro (left)
+                    if *index == 0 {
+                        unreachable!(
+                            "Errore di parsing: operando sinistro mancante per l'op booleano <."
+                        );
+                    }
+                    let left_node = tok_vec.nodes.remove(*index - 1);
+
+                    //println!("left operand {:?}" , left_node);
+
+                    let left = match left_node {
+                        Any::ArithmeticExpression(expr) => expr,
+                        _ => unreachable!("Errore di parsing: attesa espressione aritmetica a sinistra dell'op booleano <."),
+                    };
+
+                    // Dopo il <, cerca l'operando destro
+                    if *index >= tok_vec.nodes.len() {
+                        unreachable!(
+                            "Errore di parsing: operando destro mancante per l'op booleano <."
+                        );
+                    }
+                    //println!("second print index:= {}", index);
+
+                    // Se trovi una parentesi aperta, esegui parse_boolean_subexpression
+                    let right = if let Some(node) = tok_vec.nodes.get(*index) {
+                        match node {
+                            Any::Token(token) => {
+                                if let TokenType::Bra = token.token_ty {
+                                    //println!("parsing subexpression");
+                                    //println!("parsed by recursion right expression {:?}", parse_subexpression(tok_vec, index));
+                                    parse_arithmetic_subexpression(tok_vec, index)
+                                } else {
+                                    // Token is not a parenthesis, check if it's a valid arithmetic expression
+                                    let right_node = tok_vec.nodes.remove(*index);
+                                    //println!("parsed right operand {:?}", right_node);
+                                    match right_node {
+                                        Any::ArithmeticExpression(expr) => expr,
+                                        _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra dell'op booleano <."),
+                                    }
+                                }
+                            },
+                            Any::ArithmeticExpression(_expr) =>{
+                                let right_node = tok_vec.nodes.remove(*index);
+                                    //println!("parsed right operand {:?}", right_node);
+                                    match right_node {
+                                        Any::ArithmeticExpression(expr) => expr,
+                                        _ => unreachable!("Errore di parsing: attesa espressione aritmetica a destra dell'op booleano <."),
+                                    }
+                                },
+                                _ => unreachable!("Errore di parsing: nodo non riconosciuto a destra dell'op booleano <."),
+                        }
+                    } else {
+                        unreachable!(
+                            "Errore di parsing: nessun token trovato a destra dell'op booleano <."
+                        );
+                    };
+
+                    //println!("printing the token vector after all");
+                    // let mut j = 0;
+                    // while j < tok_vec.nodes.len() {
+                    //     println!("{:?}", tok_vec.nodes[j]);
+                    //     j = j + 1;
+                    // }
+                    // Crea l'oggetto Less con left e right
+                    let less_expr = NotEqual { left, right };
+
+                    // Reinserisci l'oggetto Less nel vettore come BooleanExpression
+                    tok_vec
+                        .nodes
+                        .insert(*index - 1, Any::BooleanExpression(Box::new(less_expr)));
+
+                    //elimino il token contenente l'operatore <
                     tok_vec.nodes.remove(*index);
                 }
                 TokenType::Less => {

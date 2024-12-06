@@ -9,8 +9,8 @@ use std::path::Path;
 
 fn main() {    
     //test file path
-    let program_file_path = Path::new("/home/alberto/Desktop/softver/src/test/factorial");
-    let state_file_path = Path::new("/home/alberto/Desktop/softver/src/test/factorialState");
+    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/factorial");
+    let state_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/factorialState");
     
     //read from the file
     let contents = fs::read_to_string(program_file_path)
@@ -19,10 +19,5 @@ fn main() {
 
     //lex parse and evaluate the program
     parser::analyze(contents, initial_state);
-    
-
-    
-
-
-    
+ 
 }

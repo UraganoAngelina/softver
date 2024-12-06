@@ -21,6 +21,7 @@ pub enum TokenType {
     Less,       // '<'
     Greater,    // '>'
     GreatEqual, // '>='
+    NotEqual,
     Equal,      // '='
     And,        // '&&' 'and'
     Or,         // '||' 'or'
@@ -183,7 +184,13 @@ impl Lexer {
                 }
                 '!' => {
                     self.advance();
-                    Token::new("!".to_string(), TokenType::Not)
+                    if let Some('=') = self.current_char(){
+                        self.advance();
+                        Token::new("!=".to_string(), TokenType::NotEqual)
+                    }
+                    else {
+                        Token::new("!".to_string(), TokenType::Not)
+                    }
                 }
 
                 // Simboli

@@ -1,4 +1,4 @@
-use num_traits::{Bounded, Zero};
+use num_traits::{Bounded, Zero, CheckedMul, CheckedAdd, CheckedDiv, CheckedSub};
 use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::cmp::PartialOrd;
 
@@ -136,7 +136,7 @@ impl<T: PartialOrd> PartialOrd for AbstractInterval<T> {
 
 impl<T> Add for AbstractInterval<T>
 where
-    T: PartialOrd + Copy + std::ops::Add<Output = T>,
+    T: PartialOrd + Copy + std::ops::Sub<Output = T> + std::cmp::Ord + From<i64> + Bounded + Zero + CheckedAdd,
 {
     type Output = Self;
 
@@ -145,15 +145,27 @@ where
             (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom,
             (Self::Top, _) | (_, Self::Top) => Self::Top,
             (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
-                Self::Bounded { lower: l1+l2, upper: u1+u2 }
+                Self::Bounded { lower: checked_add(l1, l2), upper: checked_add(u1, u2) }
             }
         }
     }
 }
 
+fn checked_add<T>(a: T, b: T) -> T
+where
+    T: std::ops::Add<Output = T> + std::cmp::Ord + CheckedAdd + Bounded + Copy + Zero,
+{
+    match a.checked_add(&b){
+        Some(result) => result,
+        None if a > T::zero() => T::max_value(),
+        None => T::min_value(),
+
+    } 
+}
+
 impl<T> Sub for AbstractInterval<T>
 where
-    T: PartialOrd + Copy + std::ops::Sub<Output = T>,
+    T: PartialOrd + Copy + std::ops::Sub<Output = T> + std::cmp::Ord + From<i64> + Bounded + Zero + CheckedSub,
 {
     type Output = Self;
 
@@ -163,13 +175,24 @@ where
             (Self::Top, _) | (_, Self::Top) => Self::Top,
             (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
                 let candidates = [
-                    l1 - l2,
-                    l1 - u2,
-                    u1 - l2,
-                    u1 - u2,
+                    checked_sub(l1, l2),
+                    checked_sub(l1, u2),
+                    checked_sub(u1, l2),
+                    checked_sub(u1, u2),
                 ];
-                let new_lower = *candidates.iter().min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-                let new_upper = *candidates.iter().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+
+                let new_lower = candidates
+                    .iter()
+                    .filter_map(|&x| Some(x)) // Filtra i risultati validi
+                    .min() // Trova il valore minimo
+                    .unwrap_or(min_value::<T>()); // Se tutto fallisce, ritorna il valore minimo
+
+                let new_upper = candidates
+                    .iter()
+                    .filter_map(|&x| Some(x)) // Filtra i risultati validi
+                    .max() // Trova il valore massimo
+                    .unwrap_or(max_value::<T>()); // Se tutto fallisce, ritorna il valore massimo
+
                 Self::Bounded {
                     lower: new_lower,
                     upper: new_upper,
@@ -179,10 +202,21 @@ where
     }
 }
 
+fn checked_sub<T>(a: T, b: T) -> T
+where
+    T: std::ops::Sub<Output = T> + std::cmp::Ord + CheckedSub + Bounded + Copy + Zero,
+{
+    match a.checked_sub(&b){
+        Some(result) => result,
+        None if a > T::zero() => T::max_value(),
+        None => T::min_value(),
+
+    } 
+}
 
 impl<T> Mul for AbstractInterval<T>
 where
-    T: PartialOrd + Copy + std::ops::Mul<Output = T>,
+    T: PartialOrd + Copy + std::ops::Mul<Output = T> + std::cmp::Ord + From<i64> + Bounded + Zero + CheckedMul,
 {
     type Output = Self;
 
@@ -192,13 +226,24 @@ where
             (Self::Top, _) | (_, Self::Top) => Self::Top,
             (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
                 let candidates = [
-                    l1 * l2,
-                    l1 * u2,
-                    u1 * l2,
-                    u1 * u2,
+                    checked_mul(l1, l2),
+                    checked_mul(l1, u2),
+                    checked_mul(u1, l2),
+                    checked_mul(u1, u2),
                 ];
-                let new_lower = *candidates.iter().min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-                let new_upper = *candidates.iter().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+
+                let new_lower = candidates
+                    .iter()
+                    .filter_map(|&x| Some(x)) // Filtra i risultati validi
+                    .min() // Trova il valore minimo
+                    .unwrap_or(min_value::<T>()); // Se tutto fallisce, ritorna il valore minimo
+
+                let new_upper = candidates
+                    .iter()
+                    .filter_map(|&x| Some(x)) // Filtra i risultati validi
+                    .max() // Trova il valore massimo
+                    .unwrap_or(max_value::<T>()); // Se tutto fallisce, ritorna il valore massimo
+
                 Self::Bounded {
                     lower: new_lower,
                     upper: new_upper,
@@ -208,10 +253,36 @@ where
     }
 }
 
+/// Funzione helper per effettuare una moltiplicazione controllata
+fn checked_mul<T>(a: T, b: T) -> T
+where
+    T: std::ops::Mul<Output = T> + std::cmp::Ord + CheckedMul + Bounded + Copy + Zero,
+{
+     match a.checked_mul(&b) {
+        Some(result) => result,
+        None if a > T::zero() => T::max_value(), 
+        None => T::min_value(),
+     } // Usa il metodo built-in per tipi numerici nativi
+}
+
+/// Funzioni per ottenere i valori minimi e massimi di un tipo
+fn min_value<T>() -> T
+where
+    T: std::cmp::Ord + Bounded,
+{
+    T::min_value()
+}
+
+fn max_value<T>() -> T
+where
+    T: std::cmp::Ord + Bounded,
+{
+    T::max_value()
+}
 
 impl<T> Div for AbstractInterval<T>
 where
-    T: PartialOrd + Copy + std::ops::Div<Output = T> + From<i32>,
+    T: PartialOrd + Copy + std::ops::Div<Output = T> + From<i64>,
 {
     type Output = Self;
 

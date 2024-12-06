@@ -85,6 +85,8 @@ impl AbstractState {
                 variables: HashMap::new(), // Top non ha variabili specifiche
             };
         }
+        println!("LUB STATE 1 {:?}", self);
+        println!("LUB STATE 2 {:?}", other);
 
         // Creiamo una nuova mappa per le variabili che contiene il lub di ogni intervallo
         let mut new_variables: HashMap<String, AbstractInterval<i64>> = HashMap::new();
@@ -108,10 +110,12 @@ impl AbstractState {
         }
 
         // Creiamo il nuovo stato con le variabili unite
-        AbstractState {
+        let newstate=AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
-        }
+        };
+        println!("LUB RETURN  {:?}", newstate);
+        newstate
     }
 
     pub fn state_widening(&self, other : &AbstractState) -> AbstractState {
@@ -122,6 +126,8 @@ impl AbstractState {
         if other.is_bottom {
             return self.clone();
         }
+        println!("WIDENING STATE 1 {:?}", self);
+        println!("WIDENING STATE 2 {:?}", other);
 
         // Se uno e' Top, ritorniamo uno stato Top
         if self.is_top() || other.is_top() {
@@ -151,10 +157,12 @@ impl AbstractState {
         }
 
         // Creiamo il nuovo stato con le variabili unite
-        AbstractState {
+        let newstate=AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
-        }
+        };
+        println!("WIDENING RETURN {:?}", newstate);
+        newstate
     }
 
     pub fn state_narrowing(&self, other : &AbstractState) -> AbstractState{

@@ -1,6 +1,7 @@
 use crate::abstract_state::AbstractState;
 use crate::ast::{arithmetic::*, boolean::*, State};
 use std::fmt::Debug;
+use std::thread::current;
 
 
 pub trait Statement: Debug {
@@ -153,21 +154,39 @@ impl Statement for While {
     }
     fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
         
-        let precondition = state.clone();
-        let  mut current_state = state.clone();
-        let mut prev_state= AbstractState::new();
-
+       let precondition = state.clone();
+       println!("PRECONDITION {:?}" , precondition);
+       let mut guard_result = AbstractState::new();
+       let mut body_result = AbstractState::new();
+       let mut prev_state= state.clone();
+       let mut current_state= state.clone();
+       let mut iterations = 5;
         loop {
-            prev_state=current_state.clone();
-           let mut guard_result= self.guard.abs_evaluate(&mut prev_state);
-           let mut body_result = self.body.abs_evaluate(& mut guard_result);
-           body_result= body_result.state_widening(&guard_result);
-           current_state= prev_state.state_lub(&body_result);
-           if prev_state == current_state {break};
-        }
+            println!("------------------------------------- ");
+            prev_state= current_state.clone();
+            iterations-=1;
+            guard_result    =  self.guard.abs_evaluate(&mut prev_state);
+            println!("Guard eval : {:?}" , guard_result);
 
-        state.variables.extend(current_state.variables.clone());
-        precondition.state_narrowing(&current_state)
+            body_result     =  self.body.abs_evaluate(&mut guard_result);
+            println!("Body eval : {:?}" , body_result);
+            body_result     = prev_state.state_lub(&body_result);
+
+            current_state   = prev_state.state_widening(&body_result);
+
+            println!("prev state {:?}", prev_state);
+            println!("curr state {:?}", current_state);
+            
+            
+            if current_state == prev_state || iterations==0 {break;}
+        }
+        println!("------------------------------------- ");
+        println!("INVARIANT: {:?}", current_state);
+        
+        //TODO CAPIRE COME STRA CAZZO RIUSCIRE A FARE FILTERING DI CURRENTSTATE CON GUARD NEGATA 
+        //TODO PERÒ NON HO NESSUN MODO DI EVALUARE QUANDO LA GUARD È FALSE, QUINDI DEVO INSERIRE UN FLAG
+        //TODO CHE MI PERMETTA DI CAMBIARE IL COMPORTAMENTO DELL'EVALUATION DELLA BSHARP 
+        current_state
         
     }
 }
