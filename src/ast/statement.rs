@@ -1,7 +1,6 @@
 use crate::abstract_state::AbstractState;
 use crate::ast::{arithmetic::*, boolean::*, State};
 use std::fmt::Debug;
-use std::thread::current;
 
 
 pub trait Statement: Debug {
@@ -122,8 +121,8 @@ impl Statement for IfThenElse {
         }
     }
     fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        let then_state = self.guard.abs_evaluate(&mut self.true_expr.abs_evaluate(state));
-        let else_state = self.guard.abs_evaluate(&mut self.false_expr.abs_evaluate(state));
+        let then_state = self.guard.abs_evaluate(&mut self.true_expr.abs_evaluate(state), false);
+        let else_state = self.guard.abs_evaluate(&mut self.false_expr.abs_evaluate(state), false);
         return AbstractState::state_lub(&then_state, &else_state);
     }
 }
@@ -160,34 +159,39 @@ impl Statement for While {
        let mut body_result = AbstractState::new();
        let mut prev_state= state.clone();
        let mut current_state= state.clone();
-       let mut iterations = 5;
         loop {
-            println!("------------------------------------- ");
-            prev_state= current_state.clone();
-            iterations-=1;
-            guard_result    =  self.guard.abs_evaluate(&mut prev_state);
+            println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
+            
+            prev_state = current_state.clone();
+            println!("prev state {:?}", prev_state);
+
+            guard_result    =  self.guard.abs_evaluate(&mut prev_state.clone(), false);
             println!("Guard eval : {:?}" , guard_result);
 
-            body_result     =  self.body.abs_evaluate(&mut guard_result);
+            body_result     =  self.body.abs_evaluate(&mut guard_result.clone());
             println!("Body eval : {:?}" , body_result);
-            body_result     = prev_state.state_lub(&body_result);
+            body_result     = prev_state.state_lub(&body_result.clone());
 
-            current_state   = prev_state.state_widening(&body_result);
+            current_state   = prev_state.state_widening(&body_result.clone());
 
-            println!("prev state {:?}", prev_state);
+            
             println!("curr state {:?}", current_state);
+            println!("prev state {:?}", prev_state);
             
+            //prev_state= current_state.clone();
             
-            if current_state == prev_state || iterations==0 {break;}
+            if current_state == prev_state  {break;}
         }
-        println!("------------------------------------- ");
-        println!("INVARIANT: {:?}", current_state);
-        
-        //TODO CAPIRE COME STRA CAZZO RIUSCIRE A FARE FILTERING DI CURRENTSTATE CON GUARD NEGATA 
-        //TODO PERÒ NON HO NESSUN MODO DI EVALUARE QUANDO LA GUARD È FALSE, QUINDI DEVO INSERIRE UN FLAG
-        //TODO CHE MI PERMETTA DI CAMBIARE IL COMPORTAMENTO DELL'EVALUATION DELLA BSHARP 
-        current_state
-        
+        println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
+        println!("state after cycle: {:?}", current_state);
+        // filtering con !guard
+        let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        println!("CYCLE INVARIANT: {:?}", invariant);
+        // narrowing phase
+        let postcondition= precondition.state_narrowing(&invariant.clone());
+        println!("POST CONDITION {:?}", postcondition);
+        postcondition
+
     }
 }
 
@@ -232,7 +236,7 @@ impl Statement for For {
         let mut current_state= state.clone();
         loop {
             prev_state=current_state.clone();
-            let mut exit_result = self.guard.abs_evaluate(&mut prev_state);
+            let mut exit_result = self.guard.abs_evaluate(&mut prev_state, false);
             let mut body_result = self.body.abs_evaluate(&mut exit_result);
             body_result= body_result.state_widening(&exit_result);
 
@@ -286,7 +290,7 @@ impl Statement for RepeatUntil {
         loop {
             prev_state=current_state.clone();
             let mut body_result = self.body.abs_evaluate(&mut prev_state);
-            let guard_result = self.guard.abs_evaluate(&mut body_result);
+            let guard_result = self.guard.abs_evaluate(&mut body_result, false);
             body_result=body_result.state_widening(&guard_result);
             current_state = prev_state.state_lub(&body_result);
             if prev_state == current_state {break}

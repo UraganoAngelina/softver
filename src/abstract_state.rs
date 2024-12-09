@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::abstract_domain::AbstractInterval;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct AbstractState {
     pub is_bottom: bool, // Indica se lo stato è ⊥ (false)
     pub variables: HashMap<String, AbstractInterval<i64>>, // Variabili astratte
@@ -172,6 +172,8 @@ impl AbstractState {
         if other.is_bottom {
             return self.clone();
         }
+        println!("NARROWING STATE 1 {:?}", self);
+        println!("NARROWING STATE 2 {:?}", other);
 
         // Se uno e' Top, ritorniamo uno stato Top
         if self.is_top() || other.is_top() {
@@ -199,11 +201,21 @@ impl AbstractState {
                 new_variables.insert(key.clone(), right_interval.clone());
             }
         }
-
         // Creiamo il nuovo stato con le variabili unite
-        AbstractState {
+        let newstate= AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
+        };
+        println!("NARROWING RETURN {:?}", newstate);
+        newstate
+    }
+}
+
+impl Clone for AbstractState {
+    fn clone(&self) -> Self {
+        Self {
+            is_bottom: self.is_bottom,
+            variables: self.variables.clone(),
         }
     }
 }
