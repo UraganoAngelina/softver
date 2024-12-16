@@ -336,7 +336,7 @@ impl BooleanExpression for Great {
                             state.update_interval(
                                 &var_name.value,
                                 AbstractInterval::Bounded {
-                                    lower: std::cmp::max(l1, l2),
+                                    lower: std::cmp::max(l1, l2-1),
                                     upper: u1,
                                 },
                             );
@@ -567,7 +567,7 @@ impl BooleanExpression for Less {
                                 &var_name.value,
                                 AbstractInterval::Bounded {
                                     lower: l1,
-                                    upper: std::cmp::min(u1, u2),
+                                    upper: std::cmp::min(u1, u2-1),
                                 },
                             );
                             state.clone()

@@ -178,19 +178,28 @@ impl Statement for While {
             println!("curr state {:?}", current_state);
             println!("prev state {:?}", prev_state);
             
-            //prev_state= current_state.clone();
-            
             if current_state == prev_state  {break;}
         }
         println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
         println!("state after cycle: {:?}", current_state);
+        println!("NARROWING PHASE ");
+        loop {
+            prev_state=current_state.clone();
+            guard_result=self.guard.abs_evaluate(&mut prev_state.clone(), false);
+            println!("guard result {:?}", guard_result);
+            body_result=self.body.abs_evaluate(&mut guard_result.clone());
+            println!("prev_state input {:?}", prev_state);
+            println!("body result {:?}", body_result);
+            current_state= prev_state.state_narrowing(&body_result.clone());
+            println!("curr_state {:?}", current_state);
+            println!("prev_state {:?}", prev_state);
+            if current_state == prev_state {break;}
+        }
+
         // filtering con !guard
         let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
         println!("CYCLE INVARIANT: {:?}", invariant);
-        // narrowing phase
-        let postcondition= precondition.state_narrowing(&invariant.clone());
-        println!("POST CONDITION {:?}", postcondition);
-        postcondition
+        invariant
 
     }
 }
@@ -283,20 +292,45 @@ impl Statement for RepeatUntil {
         current_state
     }
     fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        let  precondition = state.clone();
-        let mut prev_state= AbstractState::new();
+        let precondition = state.clone();
+        println!("PRECONDITION {:?}" , precondition);
+        let mut guard_result = AbstractState::new();
+        let mut body_result = AbstractState::new();
+        let mut prev_state= state.clone();
         let mut current_state= state.clone();
-
-        loop {
-            prev_state=current_state.clone();
-            let mut body_result = self.body.abs_evaluate(&mut prev_state);
-            let guard_result = self.guard.abs_evaluate(&mut body_result, false);
-            body_result=body_result.state_widening(&guard_result);
-            current_state = prev_state.state_lub(&body_result);
-            if prev_state == current_state {break}
-        }
-        state.variables.extend(current_state.variables.clone());
-        precondition.state_narrowing(&current_state)
+         loop {
+             println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
+             
+             prev_state = current_state.clone();
+             println!("prev state {:?}", prev_state);
+ 
+             body_result     =  self.body.abs_evaluate(&mut prev_state.clone());
+             guard_result    =  self.guard.abs_evaluate(&mut body_result, false);
+             println!("Body eval : {:?}" , body_result);
+ 
+             
+             println!("Guard eval : {:?}" , guard_result);
+             guard_result     = prev_state.state_lub(&guard_result.clone());
+ 
+             current_state   = prev_state.state_widening(&guard_result.clone());
+ 
+             
+             println!("curr state {:?}", current_state);
+             println!("prev state {:?}", prev_state);
+             
+             //prev_state= current_state.clone();
+             
+             if current_state == prev_state  {break;}
+         }
+         println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
+         println!("state after cycle: {:?}", current_state);
+         // filtering con !guard
+         let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
+         println!("CYCLE INVARIANT: {:?}", invariant);
+         // narrowing phase
+         let postcondition= precondition.state_narrowing(&invariant.clone());
+         println!("POST CONDITION {:?}", postcondition);
+         postcondition
     }
 }
 

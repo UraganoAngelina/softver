@@ -2458,6 +2458,6 @@ pub fn analyze(program: String, initial_state: String) {
         }
     }
 
-    println!("state printing after code evaluation {:?}" , abs_state);
+   // println!("state printing after code evaluation {:?}" , abs_state);
     //occhio al caso angeli degli spazi cancellati: 10- -10
 }
