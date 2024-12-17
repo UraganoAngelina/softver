@@ -94,13 +94,6 @@ where
             _ => false,
         }
     }
-    
-    pub fn as_bounded_interval(&self) -> Option<AbstractInterval<T>>{
-        match self {
-            AbstractInterval::Bounded { lower: l, upper: u } => Some(AbstractInterval::Bounded { lower: l.clone(), upper: u.clone() }),
-            _ => None
-        }
-    }
 }
 
 impl<T: PartialEq> PartialEq for AbstractInterval<T> {
@@ -282,7 +275,7 @@ where
 
 impl<T> Div for AbstractInterval<T>
 where
-    T: PartialOrd + Copy + std::ops::Div<Output = T> + From<i64>,
+    T: PartialOrd + Copy + std::ops::Div<Output = T> + From<i64>  + std::cmp::Ord  + Bounded + Zero + CheckedDiv,
 {
     type Output = Self;
 
@@ -295,14 +288,23 @@ where
                     return Self::Bottom; // Errore runtime
                 }
                 let candidates = [
-                    l1 / l2, 
-                    l1 / u2, 
-                    u1 / l2, 
-                    u1 / u2, 
+                    checked_div(l1, l2),
+                    checked_div(l1 , u2),
+                    checked_div(u1, l2),
+                    checked_div(u1, u2), 
                 ];
 
-                let new_lower = *candidates.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
-                let new_upper = *candidates.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+                let new_lower = candidates
+                    .iter()
+                    .filter_map(|&x| Some(x)) // Filtra i risultati validi
+                    .min() // Trova il valore minimo
+                    .unwrap_or(min_value::<T>()); // Se tutto fallisce, ritorna il valore minimo
+
+                let new_upper = candidates
+                    .iter()
+                    .filter_map(|&x| Some(x)) // Filtra i risultati validi
+                    .max() // Trova il valore massimo
+                    .unwrap_or(max_value::<T>()); // Se tutto fallisce, ritorna il valore massimo
 
                 Self::Bounded {
                     lower: new_lower,
@@ -311,6 +313,17 @@ where
             }
         }
     }
+}
+
+fn checked_div<T>(a: T, b: T) -> T
+where
+    T: std::ops::Div<Output = T> + std::cmp::Ord + CheckedDiv + Bounded + Copy + Zero,
+{
+     match a.checked_div(&b) {
+        Some(result) => result,
+        None if a > T::zero() => T::max_value(), 
+        None => T::min_value(),
+     } // Usa il metodo built-in per tipi numerici nativi
 }
 
 impl<T> Neg for AbstractInterval<T>

@@ -3,7 +3,7 @@ use crate::ast::{
     boolean::*,
     statement::*,
 };
-use crate::{abstract_state, ast};
+use crate::abstract_state;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenType;
@@ -2466,7 +2466,7 @@ pub fn analyze(program: String, initial_state: String) {
     //EVALUATING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     // evaluate the final statement
-    let mut state = ast::State::new();
+    //let mut state = ast::State::new();
 
     let mut abs_state = abstract_state::AbstractState::new();
     
