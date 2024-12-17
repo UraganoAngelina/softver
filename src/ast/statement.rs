@@ -189,8 +189,8 @@ impl Statement for While {
             }
         }
         println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
-        println!("state after cycle: {:?}", current_state);
-        println!("NARROWING PHASE ");
+        println!("CYCLE INVARIANT: {:?}", current_state);
+        //println!("NARROWING PHASE ");
         loop {
             _prev_state = current_state.clone();
             _guard_result = self.guard.abs_evaluate(&mut _prev_state.clone(), false);
@@ -207,10 +207,10 @@ impl Statement for While {
         }
 
         // filtering con !guard
-        let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
-        state.variables.extend(invariant.variables.clone());
-        println!("CYCLE INVARIANT: {:?}", invariant);
-        invariant
+        let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        state.variables.extend(postcondition.variables.clone());
+        println!("CYCLE POSTCONDITION: {:?}", postcondition);
+        postcondition
     }
 }
 
@@ -282,8 +282,8 @@ impl Statement for For {
             }
         }
         println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
-        println!("state after cycle: {:?}", current_state);
-        println!("NARROWING PHASE ");
+        println!("CYCLE INVARIANT {:?}", current_state);
+        //println!("NARROWING PHASE ");
         loop {
             _prev_state = current_state.clone();
             _guard_result = self.guard.abs_evaluate(&mut _prev_state.clone(), false);
@@ -301,10 +301,10 @@ impl Statement for For {
         }
 
         // filtering con !guard
-        let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
-        state.variables.extend(invariant.variables.clone());
-        println!("CYCLE INVARIANT: {:?}", invariant);
-        invariant
+        let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        state.variables.extend(postcondition.variables.clone());
+        println!("CYCLE POSTCONDITION: {:?}", postcondition);
+        postcondition
     }
 }
 
@@ -365,8 +365,8 @@ impl Statement for RepeatUntil {
             }
         }
         println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
-        println!("state after cycle: {:?}", current_state);
-        println!("NARROWING PHASE ");
+        println!("CYCLE INVARIANT: {:?}", current_state);
+        //println!("NARROWING PHASE ");
         loop {
             prev_state = current_state.clone();
             _guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), false);
@@ -383,9 +383,9 @@ impl Statement for RepeatUntil {
         }
 
         // filtering con !guard
-        let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
-        state.variables.extend(invariant.variables.clone());
-        println!("CYCLE INVARIANT: {:?}", invariant);
-        invariant
+        let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        state.variables.extend(postcondition.variables.clone());
+        println!("CYCLE INVARIANT: {:?}", postcondition);
+        postcondition
     }
 }
