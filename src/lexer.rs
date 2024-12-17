@@ -27,6 +27,7 @@ pub enum TokenType {
     Or,         // '||' 'or'
     Not,        // '!'
     PlusPlus,   // '++'
+    MinusMinus, // '--'
 
     // Parole chiave
     If,
@@ -123,7 +124,12 @@ impl Lexer {
                 }
                 '-' => {
                     self.advance();
-                    Token::new("-".to_string(), TokenType::Minus)
+                    if let Some('-') = self.current_char(){
+                        self.advance();
+                        Token::new("--".to_string(), TokenType::MinusMinus)
+                    }else{
+                        Token::new("-".to_string(), TokenType::Minus)
+                    }
                 }
                 '*' => {
                     self.advance();

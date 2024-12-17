@@ -1,12 +1,13 @@
+use crate::abstract_domain::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::{arithmetic::*, boolean::*, State};
 use std::fmt::Debug;
-
+use std::thread::current;
 
 pub trait Statement: Debug {
     fn clone_box(&self) -> Box<dyn Statement>;
     fn evaluate(&self, state: &mut State) -> State;
-    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState;
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState;
 }
 
 #[derive(Debug)]
@@ -32,12 +33,14 @@ impl Statement for Assign {
         );
         state.insert(self.var_name.clone_box().to_string(), value);
         println!("state after assign insertion: {:?}", state);
-        state.clone() 
+        state.clone()
     }
-    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState{
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         let mut new_state = state.clone();
-        let value= self.expr.abs_evaluate(&mut new_state);
-        state.variables.insert(self.var_name.as_variable().unwrap().to_string(), value);
+        let value = self.expr.abs_evaluate(&mut new_state);
+        state
+            .variables
+            .insert(self.var_name.as_variable().unwrap().to_string(), value);
         state.clone()
     }
 }
@@ -51,9 +54,9 @@ impl Statement for Skip {
     }
 
     fn evaluate(&self, state: &mut State) -> State {
-        state.clone() 
+        state.clone()
     }
-    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         state.clone()
     }
 }
@@ -75,15 +78,17 @@ impl Statement for Concat {
     fn evaluate(&self, state: &mut State) -> State {
         let mut state_after_first = self.first.evaluate(state);
         println!("state after first {:?}", state_after_first);
-        let state_after_second = self.second.evaluate(&mut state_after_first); 
+        let state_after_second = self.second.evaluate(&mut state_after_first);
         println!("state after second {:?}", state_after_second);
         //state.clear();
         state.extend(state_after_second.clone());
 
-        state_after_second 
+        state_after_second
     }
-    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        let new_state= self.second.abs_evaluate(&mut self.first.abs_evaluate(state));
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+        let new_state = self
+            .second
+            .abs_evaluate(&mut self.first.abs_evaluate(state));
         state.variables.extend(new_state.variables.clone());
         new_state
     }
@@ -113,16 +118,20 @@ impl Statement for IfThenElse {
             println!("extended state: {:?}", state);
             state_after_true
         } else {
-            let state_after_false = self.false_expr.evaluate(state); 
-            println!("state after false: {:?}", state_after_false); 
+            let state_after_false = self.false_expr.evaluate(state);
+            println!("state after false: {:?}", state_after_false);
             state.extend(state_after_false.clone());
             println!("extended state: {:?}", state);
             state_after_false
         }
     }
-    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        let then_state = self.guard.abs_evaluate(&mut self.true_expr.abs_evaluate(state), false);
-        let else_state = self.guard.abs_evaluate(&mut self.false_expr.abs_evaluate(state), false);
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+        let then_state = self
+            .guard
+            .abs_evaluate(&mut self.true_expr.abs_evaluate(state), false);
+        let else_state = self
+            .guard
+            .abs_evaluate(&mut self.false_expr.abs_evaluate(state), false);
         return AbstractState::state_lub(&then_state, &else_state);
     }
 }
@@ -143,7 +152,7 @@ impl Statement for While {
 
     fn evaluate(&self, state: &mut State) -> State {
         let mut current_state = state.clone();
-        while self.guard.evaluate(& mut current_state) {
+        while self.guard.evaluate(&mut current_state) {
             current_state = self.body.evaluate(&mut current_state);
             println!("while body current state: {:?}", current_state);
         }
@@ -151,56 +160,58 @@ impl Statement for While {
         println!("Extended state after while eval: {:?}", state);
         state.clone()
     }
-    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        
-       let precondition = state.clone();
-       println!("PRECONDITION {:?}" , precondition);
-       let mut guard_result = AbstractState::new();
-       let mut body_result = AbstractState::new();
-       let mut prev_state= state.clone();
-       let mut current_state= state.clone();
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+        let precondition = state.clone();
+        println!("PRECONDITION {:?}", precondition);
+        let mut guard_result = AbstractState::new();
+        let mut body_result = AbstractState::new();
+        let mut prev_state = state.clone();
+        let mut current_state = state.clone();
         loop {
             println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
-            
+
             prev_state = current_state.clone();
-            println!("prev state {:?}", prev_state);
+            //println!("prev state {:?}", prev_state);
 
-            guard_result    =  self.guard.abs_evaluate(&mut prev_state.clone(), false);
-            println!("Guard eval : {:?}" , guard_result);
+            guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), false);
+            //println!("Guard eval : {:?}" , guard_result);
 
-            body_result     =  self.body.abs_evaluate(&mut guard_result.clone());
-            println!("Body eval : {:?}" , body_result);
-            body_result     = prev_state.state_lub(&body_result.clone());
+            body_result = self.body.abs_evaluate(&mut guard_result.clone());
+            //println!("Body eval : {:?}" , body_result);
+            body_result = prev_state.state_lub(&body_result.clone());
 
-            current_state   = prev_state.state_widening(&body_result.clone());
+            current_state = prev_state.state_widening(&body_result.clone());
 
-            
-            println!("curr state {:?}", current_state);
-            println!("prev state {:?}", prev_state);
-            
-            if current_state == prev_state  {break;}
+            // println!("curr state {:?}", current_state);
+            // println!("prev state {:?}", prev_state);
+
+            if current_state == prev_state {
+                break;
+            }
         }
         println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
         println!("state after cycle: {:?}", current_state);
         println!("NARROWING PHASE ");
         loop {
-            prev_state=current_state.clone();
-            guard_result=self.guard.abs_evaluate(&mut prev_state.clone(), false);
-            println!("guard result {:?}", guard_result);
-            body_result=self.body.abs_evaluate(&mut guard_result.clone());
-            println!("prev_state input {:?}", prev_state);
-            println!("body result {:?}", body_result);
-            current_state= prev_state.state_narrowing(&body_result.clone());
-            println!("curr_state {:?}", current_state);
-            println!("prev_state {:?}", prev_state);
-            if current_state == prev_state {break;}
+            prev_state = current_state.clone();
+            guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), false);
+            //println!("guard result {:?}", guard_result);
+            body_result = self.body.abs_evaluate(&mut guard_result.clone());
+            // println!("prev_state input {:?}", prev_state);
+            // println!("body result {:?}", body_result);
+            current_state = prev_state.state_narrowing(&body_result.clone());
+            // println!("curr_state {:?}", current_state);
+            // println!("prev_state {:?}", prev_state);
+            if current_state == prev_state {
+                break;
+            }
         }
 
         // filtering con !guard
         let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        state.variables.extend(invariant.variables.clone());
         println!("CYCLE INVARIANT: {:?}", invariant);
         invariant
-
     }
 }
 
@@ -222,7 +233,7 @@ impl Statement for For {
         })
     }
 
-    fn evaluate(&self, state: &mut State) -> State{
+    fn evaluate(&self, state: &mut State) -> State {
         println!("State before init: {:?}", state);
         self.init.evaluate(state);
         println!("State after init: {:?}", state);
@@ -232,37 +243,71 @@ impl Statement for For {
             self.body.evaluate(state);
             println!("State after body: {:?}", state);
 
-            let _ = self.increment.evaluate(state); 
+            let _ = self.increment.evaluate(state);
             println!("State after increment: {:?}", state);
         }
         println!("Final state after for eval: {:?}", state);
         state.clone()
     }
-    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
-        let  precondition = state.clone();
-        let mut prev_state= AbstractState::new();
-        self.init.abs_evaluate(state);
-        let mut current_state= state.clone();
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+        let precondition = state.clone();
+        println!("PRECONDITION {:?}", precondition);
+        self.init.abs_evaluate(&mut state.clone());
+        let mut guard_result = AbstractState::new();
+        let mut body_result = AbstractState::new();
+        let mut prev_state = state.clone();
+        let mut current_state = state.clone();
+        let mut _increment_result = AbstractInterval::new(0 as i64, 0 as i64);
         loop {
-            prev_state=current_state.clone();
-            let mut exit_result = self.guard.abs_evaluate(&mut prev_state, false);
-            let mut body_result = self.body.abs_evaluate(&mut exit_result);
-            body_result= body_result.state_widening(&exit_result);
+            println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
 
-            if let Some(interval) = self.increment.abs_evaluate(&mut body_result).as_bounded_interval() {
-                current_state.update_interval(&self.increment.as_variable().unwrap_or_else(|| unreachable!("Increment expression must resolve to a variable")).to_string(), interval); // Assumendo una variabile da aggiornare
-            }
-            current_state = prev_state.state_lub(&body_result);
-            if prev_state == current_state {
+            prev_state = current_state.clone();
+            //println!("prev state {:?}", prev_state);
+
+            guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), false);
+            //println!("Guard eval : {:?}" , guard_result);
+
+            body_result = self.body.abs_evaluate(&mut guard_result.clone());
+            //println!("Body eval : {:?}" , body_result);
+            _increment_result= self.increment.abs_evaluate(&mut body_result);
+
+            body_result = prev_state.state_lub(&body_result.clone());
+
+            current_state = prev_state.state_widening(&body_result.clone());
+
+            // println!("curr state {:?}", current_state);
+            // println!("prev state {:?}", prev_state);
+
+            if current_state == prev_state {
                 break;
             }
         }
-        state.variables.extend(current_state.variables.clone());
-        precondition.state_narrowing(&current_state)
+        println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
+        println!("state after cycle: {:?}", current_state);
+        println!("NARROWING PHASE ");
+        loop {
+            prev_state = current_state.clone();
+            guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), false);
+            //println!("guard result {:?}", guard_result);
+            body_result = self.body.abs_evaluate(&mut guard_result.clone());
+            // println!("prev_state input {:?}", prev_state);
+            _increment_result= self.increment.abs_evaluate(&mut body_result);
+            // println!("body result {:?}", body_result);
+            current_state = prev_state.state_narrowing(&body_result.clone());
+            // println!("curr_state {:?}", current_state);
+            // println!("prev_state {:?}", prev_state);
+            if current_state == prev_state {
+                break;
+            }
+        }
 
+        // filtering con !guard
+        let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        state.variables.extend(invariant.variables.clone());
+        println!("CYCLE INVARIANT: {:?}", invariant);
+        invariant
     }
 }
-
 
 #[derive(Debug)]
 pub struct RepeatUntil {
@@ -283,7 +328,7 @@ impl Statement for RepeatUntil {
         loop {
             current_state = self.body.evaluate(&mut current_state);
             println!("repeat until body current state: {:?}", current_state);
-            if self.guard.evaluate(& mut current_state) {
+            if self.guard.evaluate(&mut current_state) {
                 break;
             }
         }
@@ -291,46 +336,57 @@ impl Statement for RepeatUntil {
         println!("Extended state after repeat until eval: {:?}", state);
         current_state
     }
-    fn abs_evaluate(&self, state: & mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         let precondition = state.clone();
-        println!("PRECONDITION {:?}" , precondition);
+        println!("PRECONDITION {:?}", precondition);
         let mut guard_result = AbstractState::new();
         let mut body_result = AbstractState::new();
-        let mut prev_state= state.clone();
-        let mut current_state= state.clone();
-         loop {
-             println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
-             
-             prev_state = current_state.clone();
-             println!("prev state {:?}", prev_state);
- 
-             body_result     =  self.body.abs_evaluate(&mut prev_state.clone());
-             guard_result    =  self.guard.abs_evaluate(&mut body_result, false);
-             println!("Body eval : {:?}" , body_result);
- 
-             
-             println!("Guard eval : {:?}" , guard_result);
-             guard_result     = prev_state.state_lub(&guard_result.clone());
- 
-             current_state   = prev_state.state_widening(&guard_result.clone());
- 
-             
-             println!("curr state {:?}", current_state);
-             println!("prev state {:?}", prev_state);
-             
-             //prev_state= current_state.clone();
-             
-             if current_state == prev_state  {break;}
-         }
-         println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
-         println!("state after cycle: {:?}", current_state);
-         // filtering con !guard
-         let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
-         println!("CYCLE INVARIANT: {:?}", invariant);
-         // narrowing phase
-         let postcondition= precondition.state_narrowing(&invariant.clone());
-         println!("POST CONDITION {:?}", postcondition);
-         postcondition
+        let mut prev_state = state.clone();
+        let mut current_state = self.body.abs_evaluate(&mut prev_state);
+        loop {
+            println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
+
+            prev_state = current_state.clone();
+            //println!("prev state {:?}", prev_state);
+
+            guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), false);
+            //println!("Guard eval : {:?}" , guard_result);
+
+            body_result = self.body.abs_evaluate(&mut guard_result.clone());
+            //println!("Body eval : {:?}" , body_result);
+            body_result = prev_state.state_lub(&body_result.clone());
+
+            current_state = prev_state.state_widening(&body_result.clone());
+
+            // println!("curr state {:?}", current_state);
+            // println!("prev state {:?}", prev_state);
+
+            if current_state == prev_state {
+                break;
+            }
+        }
+        println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
+        println!("state after cycle: {:?}", current_state);
+        println!("NARROWING PHASE ");
+        loop {
+            prev_state = current_state.clone();
+            guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), false);
+            //println!("guard result {:?}", guard_result);
+            body_result = self.body.abs_evaluate(&mut guard_result.clone());
+            // println!("prev_state input {:?}", prev_state);
+            // println!("body result {:?}", body_result);
+            current_state = prev_state.state_narrowing(&body_result.clone());
+            // println!("curr_state {:?}", current_state);
+            // println!("prev_state {:?}", prev_state);
+            if current_state == prev_state {
+                break;
+            }
+        }
+
+        // filtering con !guard
+        let invariant = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        state.variables.extend(invariant.variables.clone());
+        println!("CYCLE INVARIANT: {:?}", invariant);
+        invariant
     }
 }
-

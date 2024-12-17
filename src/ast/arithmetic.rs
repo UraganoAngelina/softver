@@ -223,7 +223,7 @@ impl ArithmeticExpression for Divide {
             self.left.abs_evaluate(abs_state) / self.right.abs_evaluate(abs_state)
         }
         else {
-            unreachable!("**RUNTIME ERROR, division by zero found while abstract interpreting**")
+            unreachable!("**RUNTIME ERROR, division by zero found while interpreting**")
         }
         
     }
@@ -269,10 +269,61 @@ impl ArithmeticExpression for PlusPlus {
             AbstractInterval::Bounded { lower, upper } => {
                 
                 let newupper = upper+1;
-                let new_interval=AbstractInterval::new(lower, newupper);
+                let newlower = lower + 1;
+                let new_interval=AbstractInterval::new(newlower, newupper);
                 abs_state.variables.insert(self.var.to_string(), new_interval);
                 new_interval
             }
         }
     }
 }
+
+#[derive(Debug)]
+pub struct MinusMinus {
+    pub var: Box<dyn ArithmeticExpression>,
+}
+impl ArithmeticExpression for MinusMinus {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+        Box::new(MinusMinus {
+            var: self.var.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: &mut State) -> i64 {
+        //Variable evaluation -> i64
+        let mut value = self.var.evaluate(state);
+        println!(
+            "value in assign eval {:?}, for var {:?}",
+            value,
+            self.var.clone_box()
+        );
+        value-=1;
+        state.insert(self.var.clone_box().to_string(), value);
+        println!("state after plus plus evaluation: {:?}", state);
+        value
+    }
+    fn as_variable(&self) -> Option<&Variable> {
+        self.var.as_variable()
+    }
+    fn to_string(&self) -> String {
+        format!("{}", self.var.to_string())
+    }
+    fn abs_evaluate(&self, abs_state : &mut AbstractState) -> AbstractInterval<i64>{
+        let  value = self.var.abs_evaluate(abs_state);
+        match value {
+            AbstractInterval::Bottom => AbstractInterval::Bottom,
+            AbstractInterval::Top => AbstractInterval::Top,
+            AbstractInterval::Bounded { lower, upper } => {
+                
+                let newupper = upper-1;
+                let newlower = lower - 1;
+                let new_interval=AbstractInterval::new(newlower, newupper);
+                abs_state.variables.insert(self.var.to_string(), new_interval);
+                new_interval
+            }
+        }
+    }
+}
+

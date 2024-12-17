@@ -36,6 +36,7 @@ impl Display for TokenVec {
                 TokenType::Or => "Or(||)".to_string(),
                 TokenType::Not => "Not(!)".to_string(),
                 TokenType::PlusPlus => "PlusPlus(++)".to_string(),
+                TokenType::MinusMinus => "MinusMinus(--)".to_string(),
                 TokenType::If => "If".to_string(),
                 TokenType::Then => "Then".to_string(),
                 TokenType::Else => "Else".to_string(),
@@ -1064,7 +1065,32 @@ pub fn parse_arithmetic_unop(tok_vec: &mut AnyVec, index: &mut usize) {
                     // Inserisci l'oggetto `Assign` nel vettore di parsing
                     tok_vec.nodes.insert( *index-1 ,Any::ArithmeticExpression(Box::new(plusp)));   
                 }
-
+                TokenType::MinusMinus => {
+                    // Assicurati di avere un token variabile prima di `PlusPlus`
+                    let var_node = tok_vec.nodes.remove(*index - 1); // Estrae il nodo della variabile
+                    let var = match var_node.as_arithmetic_expr() {
+                        Some(expr) => {
+                            if let Some(variable) = expr.as_variable() {
+                                variable
+                            } else {
+                                unreachable!(
+                                    "Errore di parsing: attesa una variabile prima di '--', found {:?}", expr
+                                );
+                            }
+                        }
+                        None => {
+                            unreachable!("Errore di parsing: attesa una variabile prima di '--'.")
+                        }
+                    };
+                    //qui ho una variabile prima del token ++
+                    // Crea l'assegnamento `i = i + 1`
+                    let minusm = MinusMinus {
+                        var : var.clone_box(),
+                    };
+    
+                    // Inserisci l'oggetto `Assign` nel vettore di parsing
+                    tok_vec.nodes.insert( *index-1 ,Any::ArithmeticExpression(Box::new(minusm)));   
+                }
                 TokenType::Minus => {
                     // Assicurati che non ci sia un operando a sinistra
                     if *index > 0 {
@@ -2458,6 +2484,6 @@ pub fn analyze(program: String, initial_state: String) {
         }
     }
 
-   // println!("state printing after code evaluation {:?}" , abs_state);
+    //println!("state printing after code evaluation {:?}" , abs_state);
     //occhio al caso angeli degli spazi cancellati: 10- -10
 }
