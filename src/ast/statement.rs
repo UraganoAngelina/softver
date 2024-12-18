@@ -261,21 +261,21 @@ impl Statement for For {
             println!("----------------------------------------------------------------------------------------------------------------------------------------------------");
 
             _prev_state = current_state.clone();
-            //println!("prev state {:?}", prev_state);
+            println!("prev state {:?}", _prev_state);
 
             _guard_result = self.guard.abs_evaluate(&mut _prev_state.clone(), false);
-            //println!("Guard eval : {:?}" , guard_result);
+            println!("Guard eval : {:?}" , _guard_result);
 
             _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-            //println!("Body eval : {:?}" , body_result);
+            println!("Body eval : {:?}" , _body_result);
             _increment_result= self.increment.abs_evaluate(&mut _body_result);
 
             _body_result = _prev_state.state_lub(&_body_result.clone());
 
             current_state = _prev_state.state_widening(&_body_result.clone());
 
-            // println!("curr state {:?}", current_state);
-            // println!("prev state {:?}", prev_state);
+             println!("curr state {:?}", current_state);
+             println!("prev state {:?}", _prev_state);
 
             if current_state == _prev_state {
                 break;

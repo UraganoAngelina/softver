@@ -811,11 +811,11 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                     }
                     let left_node = tok_vec.nodes.remove(*index - 1);
 
-                    //println!("left operand {:?}" , left_node);
+                    println!("left operand {:?}" , left_node);
 
                     let left = match left_node {
                         Any::ArithmeticExpression(expr) => expr,
-                        _ => unreachable!("Errore di parsing: attesa espressione aritmetica a sinistra dell'op booleano <."),
+                        t => unreachable!("Errore di parsing: attesa espressione aritmetica a sinistra dell'op booleano < trovato {:?}. " , t ),
                     };
 
                     // Dopo il <, cerca l'operando destro
@@ -965,7 +965,7 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 
                     let left = match left_node {
                         Any::ArithmeticExpression(expr) => expr,
-                        _ => unreachable!("Errore di parsing: attesa espressione aritmetica a sinistra dell'op booleano >."),
+                        t => unreachable!("Errore di parsing: attesa espressione aritmetica a sinistra dell'op booleano > trovato {:?}.", t),
                     };
 
                     // Dopo il >, cerca l'operando destro
@@ -1064,6 +1064,11 @@ pub fn parse_arithmetic_unop(tok_vec: &mut AnyVec, index: &mut usize) {
     
                     // Inserisci l'oggetto `Assign` nel vettore di parsing
                     tok_vec.nodes.insert( *index-1 ,Any::ArithmeticExpression(Box::new(plusp)));   
+                    tok_vec.nodes.remove(*index);
+                    println!("INDEX -1 = {:?} ", *index-1);
+                    for (i, node) in tok_vec.nodes.iter().enumerate() {
+                        println!("Indice: {}, Nodo: {:?}", i, node);
+                    }
                 }
                 TokenType::MinusMinus => {
                     // Assicurati di avere un token variabile prima di `PlusPlus`
@@ -1776,10 +1781,14 @@ pub fn parse_for_block(
     let increment_any_vec = AnyVec { nodes: increment_vec.nodes };
     let increment = increment_any_vec.nodes.into_iter().find_map(|node| {
         if let Any::ArithmeticExpression(stmt) = node {
-            // Verifica se si tratta del tipo PlusPlus
+            // Verifica se si tratta del tipo PlusPlus o MinusMinus
             if let Some(plusplus) = stmt.as_any().downcast_ref::<PlusPlus>() {
                 Some(plusplus.clone_box())
-            } else {
+            }
+            else if let Some(minusminus) = stmt.as_any().downcast_ref::<MinusMinus>() {
+                Some(minusminus.clone_box())
+            }
+            else{
                 None
             }
         } else {
@@ -2037,7 +2046,6 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     }
                 }
 
-                //TODO Gestione del condizionale if then else
                 TokenType::If => {
                     let startpos = index.clone();
                     println!("IF TOKEN FOUND");

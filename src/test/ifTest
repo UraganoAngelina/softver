@@ -1,1 +1,1 @@
-for(i:=0; i<11; i++) {if x<7 then {x:=x+1;z:=z/2} else {y:=y+1}}
+for(i:=11; i>0; i--) {if x++<7 then {x:=x+1;z:=z/2} else {y:=y+1}}
