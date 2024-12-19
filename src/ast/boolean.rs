@@ -1,16 +1,25 @@
 use crate::ast::arithmetic::ArithmeticExpression;
 use crate::ast::State;
 use std::fmt::Debug;
+//use std::any::Any;
 
 pub trait BooleanExpression: Debug {
-    fn evaluate(&self, state: &State) -> bool;
+    fn clone_box(&self) -> Box<dyn BooleanExpression>;
+    fn evaluate(&self, state: & mut State) -> bool;
+    //fn as_any(&self) -> &dyn Any;
 }
 
 #[derive(Debug)]
 pub struct Boolean(pub bool);
 
 impl BooleanExpression for Boolean {
-    fn evaluate(&self, _state: &State) -> bool {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(Boolean(self.0)) // Crea un nuovo Box con una copia di Numeral
+    }
+    fn evaluate(&self, _state: & mut State) -> bool {
         self.0
     }
 }
@@ -22,7 +31,16 @@ pub struct Equal {
 }
 
 impl BooleanExpression for Equal {
-    fn evaluate(&self, state: &State) -> bool {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(Equal {
+            left: self.left.clone_box(),
+            right: self.right.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) == self.right.evaluate(state)
     }
 }
@@ -34,21 +52,38 @@ pub struct GreatEqual {
 }
 
 impl BooleanExpression for GreatEqual {
-    fn evaluate(&self, state: &State) -> bool {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(GreatEqual{
+            left:self.left.clone_box(),
+            right:self.right.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) >= self.right.evaluate(state)
     }
 }
 #[derive(Debug)]
-pub struct Great{
+pub struct Great {
     pub left: Box<dyn ArithmeticExpression>,
     pub right: Box<dyn ArithmeticExpression>,
 }
-impl BooleanExpression for Great{
-    fn evaluate(&self, state: &State) -> bool {
+impl BooleanExpression for Great {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(Great{
+            left:self.left.clone_box(),
+            right:self.right.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) > self.right.evaluate(state)
     }
 }
-
 
 #[derive(Debug)]
 pub struct LessEqual {
@@ -57,20 +92,38 @@ pub struct LessEqual {
 }
 
 impl BooleanExpression for LessEqual {
-    fn evaluate(&self, state: &State) -> bool {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(LessEqual{
+            left:self.left.clone_box(),
+            right:self.right.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: & mut State) -> bool {
         self.left.evaluate(state) <= self.right.evaluate(state)
     }
 }
 
 #[derive(Debug)]
-pub struct Less{
+pub struct Less {
     pub left: Box<dyn ArithmeticExpression>,
     pub right: Box<dyn ArithmeticExpression>,
 }
 
-impl BooleanExpression for Less{
-    fn evaluate(&self, state: &State) -> bool {
-        self.left.evaluate(state) < self.right.evaluate(state)   
+impl BooleanExpression for Less {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(Less{
+            left:self.left.clone_box(),
+            right:self.right.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: & mut State) -> bool {
+        self.left.evaluate(state) < self.right.evaluate(state)
     }
 }
 
@@ -81,7 +134,16 @@ pub struct And {
 }
 
 impl BooleanExpression for And {
-    fn evaluate(&self, state: &State) -> bool {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(And{
+            left:self.left.clone_box(),
+            right:self.right.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) && self.right.evaluate(state)
     }
 }
@@ -93,7 +155,16 @@ pub struct Or {
 }
 
 impl BooleanExpression for Or {
-    fn evaluate(&self, state: &State) -> bool {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(Or{
+            left:self.left.clone_box(),
+            right:self.right.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) || self.right.evaluate(state)
     }
 }
@@ -104,7 +175,15 @@ pub struct Not {
 }
 
 impl BooleanExpression for Not {
-    fn evaluate(&self, state: &State) -> bool {
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
+    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+        Box::new(Not{
+            expression:self.expression.clone_box(),
+        })
+    }
+    fn evaluate(&self, state: &mut State) -> bool {
         !(self.expression.evaluate(state))
     }
 }

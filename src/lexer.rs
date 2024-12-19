@@ -2,9 +2,11 @@ use std::fmt::Debug;
 
 
 #[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
 pub enum TokenType {
     // Numeri
-    Number(i32),
+    Number(i64),
 
     // Variabili (identificatori)
     Identifier(String),
@@ -44,6 +46,8 @@ pub enum TokenType {
     Cket,      // '}'
     Semicolon, // ';'
 }
+
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct Token {
     pub value: String,
@@ -84,15 +88,6 @@ impl Lexer {
         }
     }
 
-    // Restituisce il carattere successivo senza avanzare
-    fn peek(&self) -> Option<char> {
-        if self.pos + 1 >= self.input.len() {
-            None
-        } else {
-            Some(self.input[self.pos + 1])
-        }
-    }
-
     // Avanza di un carattere
     fn advance(&mut self) {
         self.pos += 1;
@@ -114,8 +109,6 @@ impl Lexer {
         self.skip_whitespace();
 
         if let Some(current) = self.current_char() {
-            let current_clone = current.to_string();
-
             let curr_token = match current {
                 // Operatori singoli e doppi
                 '+' => {
@@ -249,7 +242,7 @@ impl Lexer {
     }
 
     // Consuma numeri
-    fn consume_number(&mut self) -> i32 {
+    fn consume_number(&mut self) -> i64 {
         let mut number_str = String::new();
         while let Some(c) = self.current_char() {
             if c.is_digit(10) {
@@ -259,7 +252,7 @@ impl Lexer {
                 break;
             }
         }
-        number_str.parse::<i32>().unwrap()
+        number_str.parse::<i64>().unwrap()
     }
 
     // Consuma identificatori o parole chiave
