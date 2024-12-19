@@ -216,7 +216,7 @@ impl fmt::Display for AbstractState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_bottom {
             // Stato è ⊥ (bottom)
-            write!(f, "⊥")
+            write!(f, "Bottom ⊥")
         } else {
             // Stato normale: stampiamo le variabili con i loro intervalli
             let variables_str: Vec<String> = self
