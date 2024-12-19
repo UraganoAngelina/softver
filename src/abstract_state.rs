@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use crate::abstract_domain::AbstractInterval;
 
@@ -85,8 +86,8 @@ impl AbstractState {
                 variables: HashMap::new(), // Top non ha variabili specifiche
             };
         }
-        println!("LUB STATE 1 {:?}", self);
-        println!("LUB STATE 2 {:?}", other);
+        // println!("LUB STATE 1 {}", self);
+        // println!("LUB STATE 2 {}", other);
 
         // Creiamo una nuova mappa per le variabili che contiene il lub di ogni intervallo
         let mut new_variables: HashMap<String, AbstractInterval<i64>> = HashMap::new();
@@ -114,7 +115,7 @@ impl AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
-        println!("LUB RETURN  {:?}", newstate);
+        //println!("LUB RETURN  {}", newstate);
         newstate
     }
 
@@ -126,8 +127,8 @@ impl AbstractState {
         if other.is_bottom {
             return self.clone();
         }
-        println!("WIDENING STATE 1 {:?}", self);
-        println!("WIDENING STATE 2 {:?}", other);
+        // println!("WIDENING STATE 1 {}", self);
+        // println!("WIDENING STATE 2 {}", other);
 
         // Se uno e' Top, ritorniamo uno stato Top
         if self.is_top() || other.is_top() {
@@ -161,7 +162,7 @@ impl AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
-        println!("WIDENING RETURN {:?}", newstate);
+        //println!("WIDENING RETURN {}", newstate);
         newstate
     }
 
@@ -172,8 +173,8 @@ impl AbstractState {
         if other.is_bottom {
             return self.clone();
         }
-        println!("NARROWING STATE 1 {:?}", self);
-        println!("NARROWING STATE 2 {:?}", other);
+        // println!("NARROWING STATE 1 {}", self);
+        // println!("NARROWING STATE 2 {}", other);
 
         // Se uno e' Top, ritorniamo uno stato Top
         if self.is_top() || other.is_top() {
@@ -206,8 +207,25 @@ impl AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
-        println!("NARROWING RETURN {:?}", newstate);
+        //println!("NARROWING RETURN {}", newstate);
         newstate
+    }
+}
+
+impl fmt::Display for AbstractState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_bottom {
+            // Stato è ⊥ (bottom)
+            write!(f, "⊥")
+        } else {
+            // Stato normale: stampiamo le variabili con i loro intervalli
+            let variables_str: Vec<String> = self
+                .variables
+                .iter()
+                .map(|(var, interval)| format!("{}: {}", var, interval))
+                .collect();
+            write!(f, "{{ {} }}", variables_str.join(", "))
+        }
     }
 }
 

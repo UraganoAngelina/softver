@@ -1,6 +1,8 @@
 use num_traits::{Bounded, Zero, CheckedMul, CheckedAdd, CheckedDiv, CheckedSub};
 use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::cmp::PartialOrd;
+use std::fmt;
+
 
 
 #[derive(Debug, Clone, Copy)]
@@ -9,6 +11,18 @@ pub enum AbstractInterval<T> {
     Top,                     // Lack of information
     Bounded {  lower: T,  upper: T }, // Intervallo delimitato
 }
+
+impl<T: fmt::Display> fmt::Display for AbstractInterval<T>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AbstractInterval::Bottom => write!( f, "Bottom ┴"),
+            AbstractInterval::Top => write!(f, "Top ┬"),
+            AbstractInterval::Bounded { lower, upper } => write!(f, "[ {}, {}]", lower, upper),
+        }
+    }
+}
+
 
 impl<T> AbstractInterval<T>
 where
