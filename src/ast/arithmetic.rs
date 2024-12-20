@@ -260,7 +260,7 @@ impl ArithmeticExpression for PlusPlus {
         self.var.as_variable()
     }
     fn to_string(&self) -> String {
-        format!("{}", self.var.to_string())
+        format!("{}++", self.var.to_string())
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval<i64> {
         let value = self.var.abs_evaluate(abs_state);
@@ -318,7 +318,7 @@ impl ArithmeticExpression for MinusMinus {
         self.var.as_variable()
     }
     fn to_string(&self) -> String {
-        format!("{}", self.var.to_string())
+        format!("{}--", self.var.to_string())
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval<i64> {
         let value = self.var.abs_evaluate(abs_state);

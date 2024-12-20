@@ -7,6 +7,7 @@ pub trait Statement: Debug {
     fn clone_box(&self) -> Box<dyn Statement>;
     fn evaluate(&self, state: &mut State) -> State;
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState;
+    fn to_string(&self) -> String;
 }
 
 #[derive(Debug)]
@@ -42,6 +43,9 @@ impl Statement for Assign {
             .insert(self.var_name.as_variable().unwrap().to_string(), value);
         state.clone()
     }
+    fn to_string(&self) -> String {
+        format!("{} := {}", self.var_name.to_string(), self.expr.to_string())
+    }
 }
 
 #[derive(Debug)]
@@ -57,6 +61,9 @@ impl Statement for Skip {
     }
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         state.clone()
+    }
+    fn to_string(&self) -> String {
+        format!("skip")
     }
 }
 
@@ -90,6 +97,9 @@ impl Statement for Concat {
             .abs_evaluate(&mut self.first.abs_evaluate(state));
         state.variables.extend(new_state.variables.clone());
         new_state
+    }
+    fn to_string(&self) -> String {
+        format!("{} ; {}", self.first.to_string(), self.second.to_string())
     }
 }
 
@@ -132,6 +142,9 @@ impl Statement for IfThenElse {
             .guard
             .abs_evaluate(&mut self.false_expr.abs_evaluate(state), false);
         return AbstractState::state_lub(&then_state, &else_state);
+    }
+    fn to_string(&self) -> String {
+        format!("if ({}) then  {{{}}}  else {{{}}}", self.guard.to_string(), self.true_expr.to_string(), self.false_expr.to_string())
     }
 }
 
@@ -211,6 +224,9 @@ impl Statement for While {
         state.variables.extend(postcondition.variables.clone());
         println!("CYCLE POSTCONDITION: {}", postcondition);
         postcondition
+    }
+    fn to_string(&self) -> String {
+        format!("while ({}) {{{}}} ", self.guard.to_string(), self.body.to_string())
     }
 }
 
@@ -306,6 +322,9 @@ impl Statement for For {
         println!("CYCLE POSTCONDITION: {}", postcondition);
         postcondition
     }
+    fn to_string(&self) -> String {
+        format!("for ({} ; {} ; {}) {{{}}} ", self.init.to_string(), self.guard.to_string(), self.increment.to_string(), self.body.to_string())
+    }
 }
 
 #[derive(Debug)]
@@ -387,5 +406,8 @@ impl Statement for RepeatUntil {
         state.variables.extend(postcondition.variables.clone());
         println!("CYCLE INVARIANT: {}", postcondition);
         postcondition
+    }
+    fn to_string(&self) -> String {
+        format!("repeat {{{}}} until ({}) ", self.body.to_string(), self.guard.to_string())
     }
 }

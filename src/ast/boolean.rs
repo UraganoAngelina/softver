@@ -9,6 +9,7 @@ pub trait BooleanExpression: Debug {
     fn clone_box(&self) -> Box<dyn BooleanExpression>;
     fn evaluate(&self, state: &mut State) -> bool;
     fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState;
+    fn to_string(&self) -> String;
 }
 
 #[derive(Debug)]
@@ -35,6 +36,9 @@ impl BooleanExpression for Boolean {
                 state.clone()
             }
         }
+    }
+    fn to_string(&self) -> String {
+        self.0.to_string()
     }
 }
 
@@ -104,6 +108,9 @@ impl BooleanExpression for Equal {
             }
         }
     }
+    fn to_string(&self) -> String {
+        format!("{} = {}", self.left.to_string(), self.right.to_string())
+    }
 }
 #[derive(Debug)]
 pub struct NotEqual {
@@ -171,6 +178,9 @@ impl BooleanExpression for NotEqual {
                 _ => AbstractState::bottom(state),
             }
         }
+    }
+    fn to_string(&self) -> String {
+        format!("{} != {}", self.left.to_string(), self.right.to_string())
     }
 }
 
@@ -288,6 +298,9 @@ impl BooleanExpression for GreatEqual {
             }
         }
     }
+    fn to_string(&self) -> String {
+        format!("{} >= {}", self.left.to_string(), self.right.to_string())
+    }
 }
 #[derive(Debug)]
 pub struct Great {
@@ -400,6 +413,9 @@ impl BooleanExpression for Great {
                 (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
             }
         }
+    }
+    fn to_string(&self) -> String {
+        format!("{} > {}", self.left.to_string(), self.right.to_string())
     }
 }
 
@@ -516,6 +532,9 @@ impl BooleanExpression for LessEqual {
             }
         }
     }
+    fn to_string(&self) -> String {
+        format!("{} <= {}", self.left.to_string(), self.right.to_string())
+    }
 }
 
 #[derive(Debug)]
@@ -631,6 +650,9 @@ impl BooleanExpression for Less {
             }
         }
     }
+    fn to_string(&self) -> String {
+        format!("{} < {}", self.left.to_string(), self.right.to_string())
+    }
 }
 
 #[derive(Debug)]
@@ -711,6 +733,9 @@ impl BooleanExpression for And {
                 variables: new_variables,
             }
         }
+    }
+    fn to_string(&self) -> String {
+        format!("{} && {}", self.left.to_string(), self.right.to_string())
     }
 }
 
@@ -794,6 +819,9 @@ impl BooleanExpression for Or {
             }
         }
     }
+    fn to_string(&self) -> String {
+        format!("{} || {}", self.left.to_string(), self.right.to_string())
+    }
 }
 
 #[derive(Debug)]
@@ -833,5 +861,9 @@ impl BooleanExpression for Not {
             variables: new_variables,
         };
         state.state_lub(&negated_state)
+    }
+
+    fn to_string(&self) -> String {
+        format!("! {}", self.expression.to_string())
     }
 }

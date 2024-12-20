@@ -60,6 +60,9 @@ impl Token {
     pub fn new(value: String, token: TokenType) -> Self {
         Token { value, token_ty: token }
     }
+    pub fn to_string(& self) -> String {
+        format!("{}", self.value)
+    }
 }
 
 pub struct Lexer {

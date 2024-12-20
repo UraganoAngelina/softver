@@ -122,16 +122,16 @@ impl Display for Any{
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Any::BooleanExpression(expr) => {
-                writeln!(f, "Boolean Expression: {:?}", expr)?;
+                writeln!(f, "{}", expr.to_string())?;
             }
             Any::ArithmeticExpression(expr) => {
-                writeln!(f, "Arithmetic Expression: {:?}", expr)?;
+                writeln!(f, "{}", expr.to_string())?;
             }
             Any::Statement(stmt) => {
-                writeln!(f, "Statement: {:?}", stmt)?;
+                writeln!(f, "{}", stmt.to_string())?;
             }
             Any::Token(token) => {
-                writeln!(f, "Token: {:?}", token)?;
+                writeln!(f, "{}", token.to_string())?;
             }
         }
         Ok(())
@@ -166,28 +166,6 @@ impl AnyVec {
     }
     pub fn new() -> Self {
         Self { nodes: Vec::new() }
-    }
-}
-
-impl Display for AnyVec {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for node in &self.nodes {
-            match node {
-                Any::BooleanExpression(expr) => {
-                    writeln!(f, "Boolean Expression: {:?}", expr)?;
-                }
-                Any::ArithmeticExpression(expr) => {
-                    writeln!(f, "Arithmetic Expression: {:?}", expr)?;
-                }
-                Any::Statement(stmt) => {
-                    writeln!(f, "Statement: {:?}", stmt)?;
-                }
-                Any::Token(token) => {
-                    writeln!(f, "Token: {:?}", token)?;
-                }
-            }
-        }
-        Ok(())
     }
 }
 
@@ -1831,8 +1809,6 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                             .insert(startpos, Any::Statement(Box::new(if_stmt)));
                     }
                 }
-
-                //TODO Gestione del ciclo while
                 TokenType::While => {
                     // Rimozione del token `While` dal vettore e check del token aperto `(`
                     any_vec.nodes.remove(*index);
@@ -1894,7 +1870,6 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         .nodes
                         .insert(body_start_index, Any::Statement(Box::new(while_stmt)));
                 }
-                //TODO Gestione ciclo for
                 TokenType::For => {
                     let (init, guard, increment);
                     // Controlla la presenza di '(' dopo 'for'
@@ -1941,7 +1916,6 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         .nodes
                         .insert(body_start_index, Any::Statement(Box::new(for_stmt)));
                 }
-                //TODO Gestione repeat until
                 TokenType::Repeat => {
                     //remove repeat token
                     any_vec.nodes.remove(*index);
@@ -2024,7 +1998,7 @@ pub fn analyze(program: String, initial_state: String) {
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     //PARSING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
-
+    println!("********PARSING********\n");
     parse_atomic(&mut state_vec, &mut index);
     index = 0;
     parse_atomic(&mut any_vec, &mut index);
@@ -2055,9 +2029,11 @@ pub fn analyze(program: String, initial_state: String) {
     index = 0;
     println!("state parsed: ");
     let mut j = 0;
+    
     while j < state_vec.nodes.len() {
-        println!("{}", state_vec.nodes[j]);
+        println!("{}", state_vec.nodes[j].to_string());
         j = j + 1;
+       
     }
     parse_statement(&mut any_vec, &mut index);
     clean_from_void(&mut any_vec);
@@ -2065,16 +2041,15 @@ pub fn analyze(program: String, initial_state: String) {
     println!("statements parsed: ");
     let mut j = 0;
     while j < any_vec.nodes.len() {
-        println!("{}", any_vec.nodes[j]);
+        println!("{}", any_vec.nodes[j].to_string());
         j = j + 1;
     }
-
+    println!("********EVALUATION********\n");
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     //EVALUATING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     // evaluate the final statement
     //let mut state = ast::State::new();
-
     let mut abs_state = abstract_state::AbstractState::new();
     
     if let Some(last_node) = state_vec.nodes.last(){
@@ -2082,7 +2057,6 @@ pub fn analyze(program: String, initial_state: String) {
             statement.abs_evaluate(& mut abs_state);
         }
     }
-    println!("state printing after state evaluation {}" , abs_state);
 
     if let Some(last_node) = any_vec.nodes.last(){
         if let Some(statement) = last_node.as_statement(){
