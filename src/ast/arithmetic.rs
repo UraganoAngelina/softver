@@ -165,7 +165,6 @@ impl ArithmeticExpression for Minus {
 pub struct Uminus {
     pub right: Box<dyn ArithmeticExpression>,
 }
-
 impl ArithmeticExpression for Uminus {
     fn as_any(&self) -> &dyn Any {
         self
@@ -194,7 +193,6 @@ pub struct Divide {
     pub left: Box<dyn ArithmeticExpression>,
     pub right: Box<dyn ArithmeticExpression>,
 }
-
 impl ArithmeticExpression for Divide {
     fn as_any(&self) -> &dyn Any {
         self
@@ -246,16 +244,13 @@ impl ArithmeticExpression for PlusPlus {
     fn evaluate(&self, state: &mut State) -> i64 {
         //Variable evaluation -> i64
         let mut value = self.var.evaluate(state);
-        println!(
-            "value in assign eval {:?}, for var {:?}",
-            value,
-            self.var.clone_box()
-        );
         value += 1;
+        //changes the state (like a statement)
         state.insert(self.var.clone_box().to_string(), value);
-        println!("state after plus plus evaluation: {:?}", state);
+        // but returns an integer value
         value
     }
+    
     fn as_variable(&self) -> Option<&Variable> {
         self.var.as_variable()
     }

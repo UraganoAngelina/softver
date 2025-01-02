@@ -122,18 +122,15 @@ impl Statement for IfThenElse {
     fn evaluate(&self, state: &mut State) -> State {
         if self.guard.evaluate(state) {
             let state_after_true = self.true_expr.evaluate(state);
-            println!("state after true: {:?}", state_after_true);
             state.extend(state_after_true.clone());
-            println!("extended state: {:?}", state);
             state_after_true
         } else {
             let state_after_false = self.false_expr.evaluate(state);
-            println!("state after false: {:?}", state_after_false);
             state.extend(state_after_false.clone());
-            println!("extended state: {:?}", state);
             state_after_false
         }
     }
+
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         let then_state = self
             .guard
@@ -166,12 +163,11 @@ impl Statement for While {
         let mut current_state = state.clone();
         while self.guard.evaluate(&mut current_state) {
             current_state = self.body.evaluate(&mut current_state);
-            println!("while body current state: {:?}", current_state);
         }
         state.extend(current_state.clone());
-        println!("Extended state after while eval: {:?}", state);
         state.clone()
     }
+
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         let precondition = state.clone();
         println!("PRECONDITION {}", precondition);
@@ -248,20 +244,16 @@ impl Statement for For {
         })
     }
 
+    //for loop evaluation
     fn evaluate(&self, state: &mut State) -> State {
-        println!("State before init: {:?}", state);
-        self.init.evaluate(state);
-        println!("State after init: {:?}", state);
-
-        while self.guard.evaluate(state) {
-            println!("State before body: {:?}", state);
-            self.body.evaluate(state);
-            println!("State after body: {:?}", state);
-
-            let _ = self.increment.evaluate(state);
-            println!("State after increment: {:?}", state);
+        let mut current_state= self.init.evaluate(state);
+    
+        while self.guard.evaluate(&mut current_state) {
+            current_state=self.body.evaluate(&mut current_state);
+            // the ++ or -- update the state on its own
+            let _ = self.increment.evaluate(&mut current_state);
         }
-        println!("Final state after for eval: {:?}", state);
+        state.extend( current_state.clone());
         state.clone()
     }
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
@@ -341,18 +333,18 @@ impl Statement for RepeatUntil {
         })
     }
 
+    //Repeat until evaluation
     fn evaluate(&self, state: &mut State) -> State {
         let mut current_state = state.clone();
         loop {
+            //one cycle iteration guaranteed
             current_state = self.body.evaluate(&mut current_state);
-            println!("repeat until body current state: {:?}", current_state);
             if self.guard.evaluate(&mut current_state) {
                 break;
             }
         }
         state.extend(current_state.clone());
-        println!("Extended state after repeat until eval: {:?}", state);
-        current_state
+        state.clone()
     }
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         let precondition = state.clone();
