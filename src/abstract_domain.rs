@@ -3,13 +3,14 @@ use std::ops::{Add, Sub, Mul, Div, Neg};
 use std::cmp::PartialOrd;
 use std::fmt;
 
-
+use crate::M;
+use crate::N;
 
 #[derive(Debug, Clone, Copy)]
 pub enum AbstractInterval<T> {
     Bottom,                  // Stuck configuration
     Top,                     // Lack of information
-    Bounded {  lower: T,  upper: T }, // Intervallo delimitato
+    Bounded {  lower: T,  upper: T }, // Regular Interval
 }
 
 impl<T: fmt::Display> fmt::Display for AbstractInterval<T>
@@ -57,21 +58,21 @@ where
             (Self::Bottom, x) | (x, Self::Bottom) => x.clone(),
             (Self::Top , _) | (_, Self::Top) => Self::Top,
             (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
-                let new_lower = if l1<= &l2 {*l1} else if *l2<=T::zero() && l1< &l2 {T::zero()} else {T::min_value()};
-                let new_upper = if u1 >= &u2 {*u1} else if *u1<=T::zero() && u1 > &u2 {T::zero()} else {T::max_value()};  
+                let new_lower = if l1<= &l2 {*l1} else if *l2<=T::zero() && l1< &l2 {T::zero()} else { <i64 as Into<T>>::into(*M.lock().unwrap())};
+                let new_upper = if u1 >= &u2 {*u1} else if *u1<=T::zero() && u1 > &u2 {T::zero()} else {<i64 as Into<T>>::into(*N.lock().unwrap())};  
                 Self::Bounded { lower: new_lower, upper: new_upper }
             }
         }
     }
     
-    //narrowing di due intervalli 
+    //narrowing di due intervalli s
     pub fn int_narrowing(&self, other: &Self) -> Self{
         match (self , other) {
             (Self::Bottom, x) | (x, Self::Bottom) => x.clone(),
             (Self::Top, x) | (x, Self::Top)=> x.clone(),
             (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
-                let new_lower = if T::min_value() >= *l1 {*l2} else {*l1};
-                let new_upper = if T::max_value() <= *u1 {*u2} else {*u1};
+                let new_lower = if <i64 as Into<T>>::into(*M.lock().unwrap()) >= *l1 {*l2} else {*l1};
+                let new_upper = if <i64 as Into<T>>::into(*N.lock().unwrap()) <= *u1 {*u2} else {*u1};
                 Self::Bounded { lower: new_lower, upper: new_upper }
             }
         }
@@ -160,12 +161,12 @@ where
 
 fn checked_add<T>(a: T, b: T) -> T
 where
-    T: std::ops::Add<Output = T> + std::cmp::Ord + CheckedAdd + Bounded + Copy + Zero,
+    T: std::ops::Add<Output = T> + std::cmp::Ord + CheckedAdd + Bounded + Copy + Zero + From<i64> ,
 {
     match a.checked_add(&b){
         Some(result) => result,
-        None if a > T::zero() => T::max_value(),
-        None => T::min_value(),
+        None if a > T::zero() => <i64 as Into<T>>::into(*N.lock().unwrap()),
+        None => <i64 as Into<T>>::into(*M.lock().unwrap()),
 
     } 
 }
@@ -211,12 +212,12 @@ where
 
 fn checked_sub<T>(a: T, b: T) -> T
 where
-    T: std::ops::Sub<Output = T> + std::cmp::Ord + CheckedSub + Bounded + Copy + Zero,
+    T: std::ops::Sub<Output = T> + std::cmp::Ord + CheckedSub + Bounded + Copy + Zero + From<i64>,
 {
     match a.checked_sub(&b){
         Some(result) => result,
-        None if a > T::zero() => T::max_value(),
-        None => T::min_value(),
+        None if a > T::zero() => <i64 as Into<T>>::into(*N.lock().unwrap()),
+        None => <i64 as Into<T>>::into(*M.lock().unwrap()),
 
     } 
 }
@@ -263,28 +264,28 @@ where
 /// Funzione helper per effettuare una moltiplicazione controllata
 fn checked_mul<T>(a: T, b: T) -> T
 where
-    T: std::ops::Mul<Output = T> + std::cmp::Ord + CheckedMul + Bounded + Copy + Zero,
+    T: std::ops::Mul<Output = T> + std::cmp::Ord + CheckedMul + Bounded + Copy + Zero + From<i64>,
 {
      match a.checked_mul(&b) {
         Some(result) => result,
-        None if a > T::zero() => T::max_value(), 
-        None => T::min_value(),
+        None if a > T::zero() => <i64 as Into<T>>::into(*N.lock().unwrap()), 
+        None => <i64 as Into<T>>::into(*M.lock().unwrap()),
      } // Usa il metodo built-in per tipi numerici nativi
 }
 
 /// Funzioni per ottenere i valori minimi e massimi di un tipo
 fn min_value<T>() -> T
 where
-    T: std::cmp::Ord + Bounded,
+    T: std::cmp::Ord + Bounded + From<i64>,
 {
-    T::min_value()
+    <i64 as Into<T>>::into(*M.lock().unwrap())
 }
 
 fn max_value<T>() -> T
 where
-    T: std::cmp::Ord + Bounded,
+    T: std::cmp::Ord + Bounded + From<i64>,
 {
-    T::max_value()
+    <i64 as Into<T>>::into(*N.lock().unwrap())
 }
 
 impl<T> Div for AbstractInterval<T>
@@ -331,12 +332,12 @@ where
 
 fn checked_div<T>(a: T, b: T) -> T
 where
-    T: std::ops::Div<Output = T> + std::cmp::Ord + CheckedDiv + Bounded + Copy + Zero,
+    T: std::ops::Div<Output = T> + std::cmp::Ord + CheckedDiv + Bounded + Copy + Zero + From<i64>,
 {
      match a.checked_div(&b) {
         Some(result) => result,
-        None if a > T::zero() => T::max_value(), 
-        None => T::min_value(),
+        None if a > T::zero() => <i64 as Into<T>>::into(*N.lock().unwrap()), 
+        None => <i64 as Into<T>>::into(*M.lock().unwrap()),
      } // Usa il metodo built-in per tipi numerici nativi
 }
 

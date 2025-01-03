@@ -1642,7 +1642,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
     while *index < any_vec.nodes.len() {
         if let Some(Any::Token(token)) = any_vec.nodes.get(*index) {
             match token.token_ty {
-                //TODO Gestione dell'assegnazione: var := arith_expr
+               
                 TokenType::Assign => {
                     any_vec.nodes.remove(*index);
                     // Controlla che ci sia una variabile prima dell'assegnamento

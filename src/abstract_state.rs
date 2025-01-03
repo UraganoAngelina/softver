@@ -5,38 +5,31 @@ use crate::abstract_domain::AbstractInterval;
 
 #[derive(Debug, PartialEq)]
 pub struct AbstractState {
-    pub is_bottom: bool, // Indica se lo stato è ⊥ (false)
-    pub variables: HashMap<String, AbstractInterval<i64>>, // Variabili astratte
+    pub is_bottom: bool,                                   // Bottom flag ⊥
+    pub variables: HashMap<String, AbstractInterval<i64>>, // Abstract Variables
 }
 
 impl AbstractState {
-    /// Crea uno stato vuoto (non ⊥)
+    // Builds an empty state (not ⊥)
     pub fn new() -> Self {
         Self {
             is_bottom: false,
             variables: HashMap::new(),
         }
     }
-
-    /// Crea lo stato ⊥
+    // Builds bottom state ⊥
     pub fn bottom(&self) -> AbstractState {
-        AbstractState{
+        AbstractState {
             is_bottom: true,
-            variables: self.variables.clone()
+            variables: self.variables.clone(),
         }
-            
     }
-
-    /// Controlla se lo stato è ⊥
+    // Checks if the state is ⊥
     pub fn is_bottom(&self) -> bool {
         self.is_bottom
     }
-
-    pub fn update_interval(
-        &mut self,
-        variable_name: &str,               // Nome della variabile
-        new_interval: AbstractInterval<i64>, // Nuovo intervallo
-        ) -> AbstractState {
+    // Updates a specific interval in the state
+    pub fn update_interval(&mut self, variable_name: &str, new_interval: AbstractInterval<i64>) -> AbstractState {
         // Se lo stato è già bottom, restituire direttamente uno stato bottom
         if self.is_bottom() {
             return self.bottom();
@@ -58,17 +51,18 @@ impl AbstractState {
         }
 
         // Aggiorna lo stato con il nuovo intervallo
-        self.variables.insert(variable_name.to_string(), updated_interval);
+        self.variables
+            .insert(variable_name.to_string(), updated_interval);
 
         // Restituisce lo stato aggiornato
         self.clone()
     }
-
+    // Checks if the state is ⊤
     fn is_top(&self) -> bool {
         // Se ci sono variabili, verificare se una di esse è Top
         self.variables.values().any(|interval| interval.is_top())
     }
-
+    // Least Upper Bound for states
     pub fn state_lub(&self, other: &AbstractState) -> AbstractState {
         // Se uno dei due stati è Bottom, ritorna l'altro stato (nessuna informazione aggiuntiva)
         if self.is_bottom {
@@ -77,7 +71,6 @@ impl AbstractState {
         if other.is_bottom {
             return self.clone();
         }
-        
 
         // Se entrambi sono Top, ritorniamo uno stato Top
         if self.is_top() || other.is_top() {
@@ -111,17 +104,17 @@ impl AbstractState {
         }
 
         // Creiamo il nuovo stato con le variabili unite
-        let newstate=AbstractState {
+        let newstate = AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
         //println!("LUB RETURN  {}", newstate);
         newstate
     }
-
-    pub fn state_widening(&self, other : &AbstractState) -> AbstractState {
-         // Se uno dei due stati è Bottom, ritorna l'altro stato
-         if self.is_bottom {
+    // Widening operator for states
+    pub fn state_widening(&self, other: &AbstractState) -> AbstractState {
+        // Se uno dei due stati è Bottom, ritorna l'altro stato
+        if self.is_bottom {
             return other.clone();
         }
         if other.is_bottom {
@@ -134,7 +127,7 @@ impl AbstractState {
         if self.is_top() || other.is_top() {
             return AbstractState {
                 is_bottom: false,
-                variables: HashMap::new(), 
+                variables: HashMap::new(),
             };
         }
 
@@ -158,15 +151,15 @@ impl AbstractState {
         }
 
         // Creiamo il nuovo stato con le variabili unite
-        let newstate=AbstractState {
+        let newstate = AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
         //println!("WIDENING RETURN {}", newstate);
         newstate
     }
-
-    pub fn state_narrowing(&self, other : &AbstractState) -> AbstractState{
+    // Narrowing operator for states
+    pub fn state_narrowing(&self, other: &AbstractState) -> AbstractState {
         if self.is_bottom {
             return other.clone();
         }
@@ -180,7 +173,7 @@ impl AbstractState {
         if self.is_top() || other.is_top() {
             return AbstractState {
                 is_bottom: false,
-                variables: HashMap::new(), 
+                variables: HashMap::new(),
             };
         }
 
@@ -203,7 +196,7 @@ impl AbstractState {
             }
         }
         // Creiamo il nuovo stato con le variabili unite
-        let newstate= AbstractState {
+        let newstate = AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
