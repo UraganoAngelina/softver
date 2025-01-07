@@ -38,7 +38,7 @@ where
         }
     }
 
-    /// Unione di due intervalli
+    /// Interval Least Upper Bound
     pub fn int_lub(&self, other: &Self) -> Self {
         match (self, other) {
             (Self::Bottom, x) | (x, Self::Bottom) => x.clone(),
@@ -52,7 +52,7 @@ where
         }
     }
    
-    //widening di due intervalli
+    // Interval widening
     pub fn int_widening( &self , other: &Self) -> Self{
         match (self, other) {
             (Self::Bottom, x) | (x, Self::Bottom) => x.clone(),
@@ -65,7 +65,7 @@ where
         }
     }
     
-    //narrowing di due intervalli s
+    // Interval narrowing
     pub fn int_narrowing(&self, other: &Self) -> Self{
         match (self , other) {
             (Self::Bottom, x) | (x, Self::Bottom) => x.clone(),
@@ -273,7 +273,7 @@ where
      } // Usa il metodo built-in per tipi numerici nativi
 }
 
-/// Funzioni per ottenere i valori minimi e massimi di un tipo
+/// Function to obtain the global values M (⊥) and N (⊤)
 fn min_value<T>() -> T
 where
     T: std::cmp::Ord + Bounded + From<i64>,
@@ -311,15 +311,15 @@ where
 
                 let new_lower = candidates
                     .iter()
-                    .filter_map(|&x| Some(x)) // Filtra i risultati validi
-                    .min() // Trova il valore minimo
-                    .unwrap_or(min_value::<T>()); // Se tutto fallisce, ritorna il valore minimo
+                    .filter_map(|&x| Some(x)) // Filter correct results
+                    .min() // Find minimum
+                    .unwrap_or(min_value::<T>()); // If everything fails return M
 
                 let new_upper = candidates
                     .iter()
-                    .filter_map(|&x| Some(x)) // Filtra i risultati validi
-                    .max() // Trova il valore massimo
-                    .unwrap_or(max_value::<T>()); // Se tutto fallisce, ritorna il valore massimo
+                    .filter_map(|&x| Some(x)) // Filter correct results
+                    .max() // Find maximum
+                    .unwrap_or(max_value::<T>()); //If everything fails return N
 
                 Self::Bounded {
                     lower: new_lower,

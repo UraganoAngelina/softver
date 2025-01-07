@@ -64,7 +64,7 @@ impl AbstractState {
     }
     // Least Upper Bound for states
     pub fn state_lub(&self, other: &AbstractState) -> AbstractState {
-        // Se uno dei due stati è Bottom, ritorna l'altro stato (nessuna informazione aggiuntiva)
+        // One is bottom, return the other one
         if self.is_bottom {
             return other.clone();
         }
@@ -72,43 +72,39 @@ impl AbstractState {
             return self.clone();
         }
 
-        // Se entrambi sono Top, ritorniamo uno stato Top
+        // Both Top, return Top
         if self.is_top() || other.is_top() {
             return AbstractState {
                 is_bottom: false,
-                variables: HashMap::new(), // Top non ha variabili specifiche
+                variables: HashMap::new(), 
             };
         }
-        // println!("LUB STATE 1 {}", self);
-        // println!("LUB STATE 2 {}", other);
 
-        // Creiamo una nuova mappa per le variabili che contiene il lub di ogni intervallo
         let mut new_variables: HashMap<String, AbstractInterval<i64>> = HashMap::new();
 
-        // Uniamo le variabili di entrambi gli stati
+        // Doing the State Lub
         for (key, left_interval) in &self.variables {
             if let Some(right_interval) = other.variables.get(key) {
-                // Calcoliamo il lub degli intervalli per ogni variabile
+                // Interval Lub for every variable
                 new_variables.insert(key.clone(), left_interval.int_lub(right_interval));
             } else {
-                // Se la variabile è presente solo in uno stato, la aggiungiamo comunque
+                // Adding variables that are only in first state
                 new_variables.insert(key.clone(), left_interval.clone());
             }
         }
 
-        // Aggiungiamo le variabili che sono solo nell'altro stato
+        // Adding variables that are only in the second state
         for (key, right_interval) in &other.variables {
             if !self.variables.contains_key(key) {
                 new_variables.insert(key.clone(), right_interval.clone());
             }
         }
 
-        // Creiamo il nuovo stato con le variabili unite
+        // New state creation
         let newstate = AbstractState {
-            is_bottom: false, // Lo stato risultante non è Bottom
+            is_bottom: false, 
             variables: new_variables,
         };
-        //println!("LUB RETURN  {}", newstate);
         newstate
     }
     // Widening operator for states
@@ -120,10 +116,7 @@ impl AbstractState {
         if other.is_bottom {
             return self.clone();
         }
-        // println!("WIDENING STATE 1 {}", self);
-        // println!("WIDENING STATE 2 {}", other);
 
-        // Se uno e' Top, ritorniamo uno stato Top
         if self.is_top() || other.is_top() {
             return AbstractState {
                 is_bottom: false,
@@ -135,27 +128,23 @@ impl AbstractState {
 
         for (key, left_interval) in &self.variables {
             if let Some(right_interval) = other.variables.get(key) {
-                // Calcoliamo il widening degli intervalli per ogni variabile
+                // Interval widening for every variable in both states
                 new_variables.insert(key.clone(), left_interval.int_widening(right_interval));
             } else {
-                // Se la variabile è presente solo in uno stato, la aggiungiamo comunque
                 new_variables.insert(key.clone(), left_interval.clone());
             }
         }
 
-        // Aggiungiamo le variabili che sono solo nell'altro stato
         for (key, right_interval) in &other.variables {
             if !self.variables.contains_key(key) {
                 new_variables.insert(key.clone(), right_interval.clone());
             }
         }
 
-        // Creiamo il nuovo stato con le variabili unite
         let newstate = AbstractState {
-            is_bottom: false, // Lo stato risultante non è Bottom
+            is_bottom: false, 
             variables: new_variables,
         };
-        //println!("WIDENING RETURN {}", newstate);
         newstate
     }
     // Narrowing operator for states
@@ -166,10 +155,7 @@ impl AbstractState {
         if other.is_bottom {
             return self.clone();
         }
-        // println!("NARROWING STATE 1 {}", self);
-        // println!("NARROWING STATE 2 {}", other);
 
-        // Se uno e' Top, ritorniamo uno stato Top
         if self.is_top() || other.is_top() {
             return AbstractState {
                 is_bottom: false,
@@ -181,26 +167,23 @@ impl AbstractState {
 
         for (key, left_interval) in &self.variables {
             if let Some(right_interval) = other.variables.get(key) {
-                // Calcoliamo il narrowing degli intervalli per ogni variabile
+                // Interval narrowing for every variable in both states
                 new_variables.insert(key.clone(), left_interval.int_narrowing(right_interval));
             } else {
-                // Se la variabile è presente solo in uno stato, la aggiungiamo comunque
                 new_variables.insert(key.clone(), left_interval.clone());
             }
         }
 
-        // Aggiungiamo le variabili che sono solo nell'altro stato
         for (key, right_interval) in &other.variables {
             if !self.variables.contains_key(key) {
                 new_variables.insert(key.clone(), right_interval.clone());
             }
         }
-        // Creiamo il nuovo stato con le variabili unite
+
         let newstate = AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
-        //println!("NARROWING RETURN {}", newstate);
         newstate
     }
 }
