@@ -26,13 +26,13 @@ fn main() {
         .expect("Should have been able to read the program code");
     let initial_state =
         fs::read_to_string(state_file_path).expect("Should have been able to read the state");
-
+    //read from the std input
     println!("INSERT m value");
     let m = take_int();
     println!("INSERT n value");
     let n = take_int();
 
-    // Aggiorna i valori di M e N
+    // Update M and N values
     {
         let mut global_m = M.lock().unwrap();
         *global_m = m;
