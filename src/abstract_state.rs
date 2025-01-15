@@ -29,7 +29,11 @@ impl AbstractState {
         self.is_bottom
     }
     // Updates a specific interval in the state
-    pub fn update_interval(&mut self, variable_name: &str, new_interval: AbstractInterval<i64>) -> AbstractState {
+    pub fn update_interval(
+        &mut self,
+        variable_name: &str,
+        new_interval: AbstractInterval<i64>,
+    ) -> AbstractState {
         // Se lo stato è già bottom, restituire direttamente uno stato bottom
         if self.is_bottom() {
             return self.bottom();
@@ -76,10 +80,11 @@ impl AbstractState {
         if self.is_top() || other.is_top() {
             return AbstractState {
                 is_bottom: false,
-                variables: HashMap::new(), 
+                variables: HashMap::new(),
             };
         }
-
+        // println!("lub state 1 : {}", self);
+        // println!("lub state 2 : {}", other);
         let mut new_variables: HashMap<String, AbstractInterval<i64>> = HashMap::new();
 
         // Doing the State Lub
@@ -102,9 +107,10 @@ impl AbstractState {
 
         // New state creation
         let newstate = AbstractState {
-            is_bottom: false, 
+            is_bottom: false,
             variables: new_variables,
         };
+        //println!("lub result : {}", newstate);
         newstate
     }
     // Widening operator for states
@@ -142,7 +148,7 @@ impl AbstractState {
         }
 
         let newstate = AbstractState {
-            is_bottom: false, 
+            is_bottom: false,
             variables: new_variables,
         };
         newstate
@@ -162,7 +168,8 @@ impl AbstractState {
                 variables: HashMap::new(),
             };
         }
-
+        // println!("narrow state 1 {}", self);
+        // println!("narrow state 2 {}", other);
         let mut new_variables: HashMap<String, AbstractInterval<i64>> = HashMap::new();
 
         for (key, left_interval) in &self.variables {
@@ -184,6 +191,7 @@ impl AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
+        //println!("narrow result {}", newstate);
         newstate
     }
 }
@@ -192,9 +200,15 @@ impl fmt::Display for AbstractState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_bottom {
             // Stato è ⊥ (bottom)
-            write!(f, "Bottom ⊥")
+            let variables_str: Vec<String> = self
+                .variables
+                .iter()
+                .map(|(var, interval)| format!("{} : {}", var, interval))
+                .collect();
+            write!(f, "Bottom ⊥  {{ {} }}", variables_str.join(","))
         } else {
             // Stato normale: stampiamo le variabili con i loro intervalli
+           // println!("{}", self.is_bottom);
             let variables_str: Vec<String> = self
                 .variables
                 .iter()

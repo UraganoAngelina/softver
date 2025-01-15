@@ -56,18 +56,21 @@ impl ArithmeticExpression for Variable {
         Some(self)
     }
     fn evaluate(&self, state: &mut State) -> i64 {
+        println!("searching for variable {}" , self.value);
+        println!("state situation {:#?}", state);
         *state
             .get(&self.value)
-            .expect("Variabile non trovata nello stato!")
+            .expect("Variable  not found in the state!")
     }
     fn to_string(&self) -> String {
         self.value.clone()
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval<i64> {
+        println!("searching for variable {}" , self.value);
         *abs_state
             .variables
             .get(&self.value)
-            .expect("Variabile non trovata nello stato astratto!")
+            .expect("Variable not found in the abstract state!")
     }
 }
 
@@ -266,8 +269,7 @@ impl ArithmeticExpression for PlusPlus {
                 if upper < i64::max_value() {
                     if lower > i64::min_value() {
                         let newupper = upper + 1;
-                        let newlower = lower + 1;
-                        let new_interval = AbstractInterval::new(newlower, newupper);
+                        let new_interval = AbstractInterval::new(lower, newupper);
                         abs_state
                             .variables
                             .insert(self.var.to_string(), new_interval);
@@ -323,9 +325,8 @@ impl ArithmeticExpression for MinusMinus {
             AbstractInterval::Bounded { lower, upper } => {
                 if upper < i64::max_value() {
                     if lower > i64::min_value() {
-                        let newupper = upper - 1;
                         let newlower = lower - 1;
-                        let new_interval = AbstractInterval::new(newlower, newupper);
+                        let new_interval = AbstractInterval::new(newlower, upper);
                         abs_state
                             .variables
                             .insert(self.var.to_string(), new_interval);

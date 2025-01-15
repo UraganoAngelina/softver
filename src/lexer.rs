@@ -51,6 +51,7 @@ pub enum TokenType {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct Token {
     pub value: String,
     pub token_ty: TokenType,
