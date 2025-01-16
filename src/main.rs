@@ -37,7 +37,7 @@ pub fn take_bool() -> bool {
 }
 fn main() {
     //test file path
-    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/ifTest");
+    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/factorial");
     // let state_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/ifState");
 
     //read from the file

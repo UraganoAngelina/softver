@@ -2,6 +2,7 @@ use crate::abstract_domain::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::{arithmetic::*, boolean::*, State};
 use std::fmt::Debug;
+use std::thread::current;
 
 pub trait Statement: Debug {
     fn clone_box(&self) -> Box<dyn Statement>;
@@ -88,7 +89,7 @@ impl Statement for Concat {
         println!("state after second {:?}", state_after_second);
         //state.clear();
         // state.extend(state_after_second.clone());
-        println!("state printing after concat eval {:#?}" , state_after_second);
+        println!("state printing after concat eval {:#?}", state_after_second);
         state_after_second
     }
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
@@ -172,14 +173,15 @@ impl Statement for While {
 
     fn evaluate(&self, state: &mut State) -> State {
         println!("WHILE INPUT STATE {:#?}", state);
-        let mut prev_state: State ;
+        let mut prev_state: State;
         let mut current_state = state.clone();
-        loop{
-            prev_state= current_state.clone();
+        loop {
+            prev_state = current_state.clone();
             if self.guard.evaluate(&mut current_state) {
                 current_state = self.body.evaluate(&mut current_state);
+            } else {
             }
-            else{
+            if current_state == prev_state {
                 break;
             }
         }
@@ -255,21 +257,23 @@ impl Statement for For {
 
     //for loop evaluation
     fn evaluate(&self, state: &mut State) -> State {
-        let mut prev_state = state.clone();
-        let mut current_state = self.init.evaluate(&mut prev_state);
-        
-        while prev_state.clone() != current_state.clone() {
-            prev_state= current_state.clone();
-            
+        println!("FOR INPUT STATE {:#?}", state);
+        let mut prev_state: State;
+        let mut current_state = state.clone();
+        loop {
+            prev_state = current_state.clone();
             if self.guard.evaluate(&mut current_state) {
-                current_state = self.body.evaluate(& mut current_state);
+                current_state = self.body.evaluate(&mut current_state);
                 let _ = self.increment.evaluate(&mut current_state);
+            } else {
+            }
+            if current_state == prev_state {
+                break;
             }
         }
         state.extend(current_state.clone());
-        state.clone()
-
-
+        println!("state after for evaluation {:#?}", state);
+        current_state
     }
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         let precondition = state.clone();
@@ -352,17 +356,22 @@ impl Statement for RepeatUntil {
 
     //Repeat until evaluation
     fn evaluate(&self, state: &mut State) -> State {
-        let mut prev_state = state.clone();
-        // one body iteration guaranteed
-        let mut current_state = self.body.evaluate(&mut prev_state);
-        while prev_state != current_state{
-            prev_state= current_state.clone();
-            if self.guard.evaluate(&mut current_state){
-                current_state= self.body.evaluate(&mut current_state);
+        println!("REOAT UNTIL INPUT STATE {:#?}", state);
+        let mut prev_state: State;
+        let mut current_state = state.clone();
+        loop {
+            prev_state = current_state.clone();
+            if !self.guard.evaluate(&mut current_state) {
+                current_state = self.body.evaluate(&mut current_state);
+            } else {
+            }
+            if current_state == prev_state {
+                break;
             }
         }
         state.extend(current_state.clone());
-        state.clone()
+        println!("state after repeat until evaluation {:#?}", state);
+        current_state
     }
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
         let precondition = state.clone();
