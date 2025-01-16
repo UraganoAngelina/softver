@@ -12,7 +12,7 @@ use std::sync::Mutex;
 
 pub static M: Mutex<i64> = Mutex::new(0);
 pub static N: Mutex<i64> = Mutex::new(0);
-
+pub static ANALYSIS_FLAG: Mutex<i64>= Mutex::new(1);
 pub static WIDENING_FLAG: Mutex<bool> = Mutex::new(false);
 
 pub fn take_int() -> i64 {
@@ -73,6 +73,14 @@ fn main() {
 
     let mut global_wid_flag = WIDENING_FLAG.lock().unwrap();
     *global_wid_flag = _wid;
+
+    let mut _anal =0;
+    println!("Type '1' or '2' to choose between denotational and abstract semantics to perform the analysis ");
+    _anal=take_int();
+
+    let mut global_analysis_flag = ANALYSIS_FLAG.lock().unwrap();
+    *global_analysis_flag = _anal;
+
 
     //lex parse and evaluate the program
     parser::analyze(contents);

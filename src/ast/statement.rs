@@ -2,8 +2,6 @@ use crate::abstract_domain::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::{arithmetic::*, boolean::*, State};
 use std::fmt::Debug;
-use std::thread::current;
-
 pub trait Statement: Debug {
     fn clone_box(&self) -> Box<dyn Statement>;
     fn evaluate(&self, state: &mut State) -> State;
@@ -27,13 +25,13 @@ impl Statement for Assign {
 
     fn evaluate(&self, state: &mut State) -> State {
         let value = self.expr.evaluate(state);
-        println!(
-            "value in assign eval {:?}, for var {:?}",
-            value,
-            self.var_name.clone_box()
-        );
+        // println!(
+        //     "value in assign eval {:?}, for var {:?}",
+        //     value,
+        //     self.var_name.clone_box()
+        // );
         state.insert(self.var_name.clone_box().to_string(), value);
-        println!("state after assign insertion: {:?}", state);
+        //println!("state after assign insertion: {:?}", state);
         state.clone()
     }
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
@@ -84,12 +82,12 @@ impl Statement for Concat {
 
     fn evaluate(&self, state: &mut State) -> State {
         let mut state_after_first = self.first.evaluate(state);
-        println!("state after first {:?}", state_after_first);
-        let mut state_after_second = self.second.evaluate(&mut state_after_first);
-        println!("state after second {:?}", state_after_second);
+        //println!("state after first {:?}", state_after_first);
+        let  state_after_second = self.second.evaluate(&mut state_after_first);
+        //println!("state after second {:?}", state_after_second);
         //state.clear();
         // state.extend(state_after_second.clone());
-        println!("state printing after concat eval {:#?}", state_after_second);
+        //println!("state printing after concat eval {:#?}", state_after_second);
         state_after_second
     }
     fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
@@ -172,7 +170,7 @@ impl Statement for While {
     }
 
     fn evaluate(&self, state: &mut State) -> State {
-        println!("WHILE INPUT STATE {:#?}", state);
+        //println!("WHILE INPUT STATE {:#?}", state);
         let mut prev_state: State;
         let mut current_state = state.clone();
         loop {
@@ -187,6 +185,7 @@ impl Statement for While {
         }
         //fix-point found now return the state
         state.extend(current_state.clone());
+        println!("state after while evaluation {:#?}", state);
         current_state
     }
 
@@ -257,7 +256,7 @@ impl Statement for For {
 
     //for loop evaluation
     fn evaluate(&self, state: &mut State) -> State {
-        println!("FOR INPUT STATE {:#?}", state);
+        //println!("FOR INPUT STATE {:#?}", state);
         let mut prev_state: State;
         let mut current_state = state.clone();
         loop {
@@ -356,7 +355,7 @@ impl Statement for RepeatUntil {
 
     //Repeat until evaluation
     fn evaluate(&self, state: &mut State) -> State {
-        println!("REOAT UNTIL INPUT STATE {:#?}", state);
+        //println!("REPEAT UNTIL INPUT STATE {:#?}", state);
         let mut prev_state: State;
         let mut current_state = state.clone();
         loop {

@@ -1,4 +1,4 @@
-use crate::abstract_state;
+use crate::{abstract_state, ANALYSIS_FLAG};
 use crate::ast::{arithmetic::*, boolean::*, statement::*, State};
 use crate::lexer::Lexer;
 use crate::lexer::Token;
@@ -1629,7 +1629,7 @@ pub fn parse_substatement_block(
     // Controlla il risultato del parsing
     for node in sub_any_vec.nodes.iter() {
         if let Any::Statement(stmt) = node {
-            println!("RETURN SUBSTATEMENT {}", stmt.to_string());
+            //println!("RETURN SUBSTATEMENT {}", stmt.to_string());
             return Some(stmt.clone_box()); // Trova e restituisce il primo `Statement`
         }
     }
@@ -1698,15 +1698,15 @@ pub fn parse_assignment(any_vec: &mut AnyVec, index: &mut usize) {
 
 pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
     while *index < any_vec.nodes.len() {
-        println!("MAIN ANALYZING ITEM {:?} AT INDEX {:?}", any_vec.nodes[*index], *index);
+        //println!("MAIN ANALYZING ITEM {:?} AT INDEX {:?}", any_vec.nodes[*index], *index);
         if let Some(Any::Token(token)) = any_vec.nodes.get(*index) {
             match token.token_ty {
                 TokenType::Semicolon => {
-                    println!("********************* CONCATENATION FOUND *********************");
-                    println!(
-                        "removing element {:?} at index {:?} in conc",
-                        any_vec.nodes[*index], index
-                    );
+                    // println!("********************* CONCATENATION FOUND *********************");
+                    // println!(
+                    //     "removing element {:?} at index {:?} in conc",
+                    //     any_vec.nodes[*index], index
+                    // );
                     any_vec.nodes.remove(*index);
 
                     // Verifica che ci sia uno statement prima del `;`
@@ -1725,20 +1725,20 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         }
                     };
                     // Chiamata a `parse_statement` per il prossimo statement
-                    println!(
-                        "vector element {:?} at  index {:?}",
-                        any_vec.nodes[*index], *index
-                    );
+                    // println!(
+                    //     "vector element {:?} at  index {:?}",
+                    //     any_vec.nodes[*index], *index
+                    // );
 
-                    println!("VECTOR BEFORE PARSE STATEMENT");
-                    let mut j = 0;
-                    while j < any_vec.nodes.len() {
-                        println!("{:?} index: {:?}", any_vec.nodes[j], j);
-                        j = j + 1;
-                    }
+                    // println!("VECTOR BEFORE PARSE STATEMENT");
+                    // let mut j = 0;
+                    // while j < any_vec.nodes.len() {
+                    //     println!("{:?} index: {:?}", any_vec.nodes[j], j);
+                    //     j = j + 1;
+                    // }
 
                     if let Some(Any::Statement(_)) = any_vec.nodes.get(*index - 1) {
-                        println!("Statement già presente a index-1, procedo senza chiamare parse_statement.");
+                        //println!("Statement già presente a index-1, procedo senza chiamare parse_statement.");
                         let s2_node = any_vec.nodes.remove(start_index - 1);
                         let s2 = match s2_node.as_statement() {
                             Some(stmt) => stmt,
@@ -1755,19 +1755,15 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         any_vec
                             .nodes
                             .insert(start_index - 1, Any::Statement(Box::new(concat_stmt)));
-                        println!("index value: {}", index);
-                        println!("VECTOR AFTER CONCAT INSERTION");
-                        let mut j=0;
-                        while j < any_vec.nodes.len() {
-                            println!("vector element {:?} at  index {:?}", any_vec.nodes[j], j);
-                            j = j + 1;
-                        }
+                        // println!("index value: {}", index);
+                        // println!("VECTOR AFTER CONCAT INSERTION");
+                        // let mut j=0;
+                        // while j < any_vec.nodes.len() {
+                        //     println!("vector element {:?} at  index {:?}", any_vec.nodes[j], j);
+                        //     j = j + 1;
+                        // }
                     } else {
-                        println!(
-                            "Nessuno statement {:?} trovato a index-1, {} chiamo parse_statement.",
-                            any_vec.nodes[*index - 1],
-                            *index - 1
-                        );
+                        //println!("Nessuno statement {:?} trovato a index-1, {} chiamo parse_statement.",any_vec.nodes[*index - 1],*index - 1);
                         parse_statement(any_vec, &mut (*index - 1));
                         if let Some(Any::Statement(_)) = any_vec.nodes.get(start_index - 1) {
                             let s2_node = any_vec.nodes.remove(start_index - 1);
@@ -1785,12 +1781,12 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                                 first: s1.clone_box(),
                                 second: s2.clone_box(),
                             };
-                            println!("VECTOR AFTER CONCAT INSERTION");
-                            let mut j=0;
-                            while j < any_vec.nodes.len() {
-                                println!("vector element {:?} at  index {:?}", any_vec.nodes[j], j);
-                                j = j + 1;
-                            }
+                            // println!("VECTOR AFTER CONCAT INSERTION");
+                            // let mut j=0;
+                            // while j < any_vec.nodes.len() {
+                            //     println!("vector element {:?} at  index {:?}", any_vec.nodes[j], j);
+                            //     j = j + 1;
+                            // }
                             // Inserisce lo statement concatenato alla posizione corretta
                             any_vec
                                 .nodes
@@ -1804,7 +1800,6 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     }
                     *index-=1;
                 }
-
                 TokenType::If => {
                     let startpos = index.clone();
                     // Rimuove il token `If`
@@ -1889,16 +1884,16 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                 }
                 TokenType::While => {
                     // Rimozione del token `While` dal vettore e check del token aperto `(`
-                    let mut j = 0;
-                    println!("VECTOR IN WHILE PARSING");
-                    while j < any_vec.nodes.len() {
-                        println!("{:?} index: {:?}", any_vec.nodes[j], j);
-                        j = j + 1;
-                    }
-                    println!(
-                        "removing element {:?} at index {:?} in while",
-                        any_vec.nodes[*index], index
-                    );
+                    // let mut j = 0;
+                    // println!("VECTOR IN WHILE PARSING");
+                    // while j < any_vec.nodes.len() {
+                    //     println!("{:?} index: {:?}", any_vec.nodes[j], j);
+                    //     j = j + 1;
+                    // }
+                    // println!(
+                    //     "removing element {:?} at index {:?} in while",
+                    //     any_vec.nodes[*index], index
+                    // );
                     any_vec.nodes.remove(*index);
                     let open_paren = any_vec.nodes.get(*index);
                     if let Some(Any::Token(t)) = open_paren {
@@ -1989,7 +1984,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         Some(statement) => statement,
                         None => Box::new(Skip), // Se il body è vuoto, utilizza uno statement Skip come default
                     };
-                    println!("VECTOR AFTER FOR INSERTION");
+                    //println!("VECTOR AFTER FOR INSERTION");
                     
                     // Creazione dell'oggetto for
                     let for_stmt = For {
@@ -2004,11 +1999,11 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     any_vec
                         .nodes
                         .insert(body_start_index, Any::Statement(Box::new(for_stmt)));
-                    let mut j=0;
-                    while j < any_vec.nodes.len() {
-                        println!("vector element {:?} at  index {:?}", any_vec.nodes[j], j);
-                        j = j + 1;
-                    }
+                    // let mut j=0;
+                    // while j < any_vec.nodes.len() {
+                    //     println!("vector element {:?} at  index {:?}", any_vec.nodes[j], j);
+                    //     j = j + 1;
+                    // }
                 }
                 TokenType::Repeat => {
                     //remove repeat token
@@ -2077,10 +2072,6 @@ pub fn analyze(program: String) {
     //let the lexer work (string->AnyVec)
     let tokens = Lexer::tokenize(cleanp.to_owned());
     let tokenized_program = TokenVec { tokens };
-    // let state_tokens = Lexer::tokenize(initial_state);
-    // let tokenized_state = TokenVec {
-    //     tokens: state_tokens,
-    // };
 
     //let's build the ast! (AnyVec->Statement)
     // building the any vector that contains tokens and expressions
@@ -2088,52 +2079,27 @@ pub fn analyze(program: String) {
     for token in tokenized_program.tokens {
         any_vec.push_token(token);
     }
-    // let mut state_vec = AnyVec::new();
-    // for token in tokenized_state.tokens {
-    //     state_vec.push_token(token);
-    // }
 
-    let mut index = 0 as usize;
+    let mut index:  usize;
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     //PARSING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     println!("********PARSING********\n");
-    //parse_atomic(&mut state_vec, &mut index);
     index = 0;
     parse_atomic(&mut any_vec, &mut index);
     index = 0;
-    //parse_arithmetic_unop(&mut state_vec, &mut index);
-    index = 0;
     parse_arithmetic_unop(&mut any_vec, &mut index);
     index = 0;
-    // parse_bool_unop(&mut state_vec, &mut index);
-    index = 0;
     parse_bool_unop(&mut any_vec, &mut index);
-    index = 0;
     //arithmetic expressions
-    //parse_arithmetic_expression(&mut state_vec, &mut index);
     index = 0;
     parse_arithmetic_expression(&mut any_vec, &mut index);
-    index = 0;
-    //parse_bool_expression(&mut state_vec, &mut index);
     index = 0;
     parse_bool_expression(&mut any_vec, &mut index);
     index = 0;
     parse_assignment(&mut any_vec, &mut index);
-    // clean_from_void(&mut state_vec, &mut index);
-    // index = 0;
-    // clean_from_void(&mut any_vec, &mut index);
-    // index = 0;
     //statements
-    // parse_statement(&mut state_vec, &mut index);
     index = 0;
-    println!("pre parse statement: ");
-    let mut j = 0;
-
-    while j < any_vec.nodes.len() {
-        println!("{:?}", any_vec.nodes[j]);
-        j = j + 1;
-    }
     parse_statement(&mut any_vec, &mut index);
     clean_from_void(&mut any_vec);
 
@@ -2150,21 +2116,26 @@ pub fn analyze(program: String) {
     //EVALUATING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     // evaluate the final statement
-    //let mut state = ast::State::new();
-    //let mut abs_state = abstract_state::AbstractState::new();
+    let mut abs_state = abstract_state::AbstractState::new();
     let mut state = State::new();
-    println!("MAIN  STATE : {:#?}", state.clone());
+    println!("INITIAL PROGRAM STATE : {:#?}", state.clone());
 
-    // if let Some(last_node) = state_vec.nodes.last(){
-    //     if let Some(statement) = last_node.as_statement(){
-    //         statement.evaluate(& mut state);
-    //     }
-    // }
-
-    if let Some(last_node) = any_vec.nodes.last() {
-        if let Some(statement) = last_node.as_statement() {
-            let new_state =statement.evaluate(&mut state);
-            println!("state printing after code evaluation {:#?}", new_state.clone());
+    let analysis =ANALYSIS_FLAG.lock().unwrap();
+    if *analysis == 1 {
+        if let Some(last_node) = any_vec.nodes.last() {
+            if let Some(statement) = last_node.as_statement() {
+                let new_state =statement.evaluate(&mut state);
+                println!("state printing after code evaluation {:#?}", new_state.clone());
+            }
         }
     }
+    if *analysis == 2 {
+        if let Some(last_node) = any_vec.nodes.last() {
+            if let Some(statement) = last_node.as_statement() {
+                let new_state =statement.abs_evaluate(&mut abs_state);
+                println!("state printing after code evaluation {:#?}", new_state.clone());
+            }
+        }
+    }
+    
 }

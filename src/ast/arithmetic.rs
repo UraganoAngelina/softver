@@ -56,8 +56,8 @@ impl ArithmeticExpression for Variable {
         Some(self)
     }
     fn evaluate(&self, state: &mut State) -> i64 {
-        println!("searching for variable {}" , self.value);
-        println!("state situation {:#?}", state);
+        // println!("searching for variable {}" , self.value);
+        // println!("state situation {:#?}", state);
         *state
             .get(&self.value)
             .expect("Variable  not found in the state!")
@@ -66,7 +66,7 @@ impl ArithmeticExpression for Variable {
         self.value.clone()
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval<i64> {
-        println!("searching for variable {}" , self.value);
+        //println!("searching for variable {}" , self.value);
         *abs_state
             .variables
             .get(&self.value)
