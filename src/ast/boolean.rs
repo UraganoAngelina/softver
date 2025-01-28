@@ -1,4 +1,5 @@
-use crate::abstract_domain::AbstractInterval;
+use crate::abstract_domain::AbstractDomain;
+use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::arithmetic::ArithmeticExpression;
 use crate::ast::State;
@@ -319,13 +320,17 @@ impl BooleanExpression for Great {
     }
     fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
         if !flag {
+            println!("> FOUND");
+            println!("> INPUT STATE : {}", state);
             if state.is_bottom() {
+                println!("mi blocco qui?");
                 return AbstractState::bottom(state);
             }
-
-            let left_eval = self.left.abs_evaluate(state);
-            let right_eval = self.right.abs_evaluate(state);
-
+            println!("dio mega merda");
+            let left_eval = self.left.abs_evaluate(&mut state.clone());
+            print!("speriamo che non si incastri qui {}", left_eval);
+            let right_eval = self.right.abs_evaluate(&mut state.clone());
+            print!("speriamo che non si incastri nemmeno qui {}", right_eval);
             match (left_eval, right_eval) {
                 // Caso base: uno dei due è Bottom
                 (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
@@ -691,13 +696,13 @@ impl BooleanExpression for And {
                 let right_interval = right_eval.variables.get(key);
                 //combine them using the interval intersection
                 let intersec_interval = match (left_interval, right_interval) {
-                    (Some(l), Some(r)) => l.intersect(r),
-                    (Some(l), None) => l.clone(),
-                    (None, Some(r)) => r.clone(),
+                    (Some(l), Some(r)) => l.value.intersect(&r.value),
+                    (Some(l), None) => l.value.clone(),
+                    (None, Some(r)) => r.value.clone(),
                     (None, None) => AbstractInterval::Top,
                 };
 
-                new_variables.insert(key.clone(), intersec_interval);
+                new_variables.insert(key.clone(), AbstractDomain::new(intersec_interval));
             }
 
             AbstractState {
@@ -721,12 +726,12 @@ impl BooleanExpression for And {
                 let right_interval = right_eval.variables.get(key);
 
                 let union_interval = match (left_interval, right_interval) {
-                    (Some(l), Some(r)) => l.int_lub(r),
-                    (Some(l), None) => l.clone(),
-                    (None, Some(r)) => r.clone(),
+                    (Some(l), Some(r)) => l.value.int_lub(&r.value),
+                    (Some(l), None) => l.value.clone(),
+                    (None, Some(r)) => r.value.clone(),
                     (None, None) => AbstractInterval::Top,
                 };
-                new_variables.insert(key.clone(), union_interval);
+                new_variables.insert(key.clone(), AbstractDomain::new(union_interval));
             }
             AbstractState {
                 is_bottom: false,
@@ -773,12 +778,12 @@ impl BooleanExpression for Or {
                 let right_interval = right_eval.variables.get(key);
 
                 let union_interval = match (left_interval, right_interval) {
-                    (Some(l), Some(r)) => l.int_lub(r),
-                    (Some(l), None) => l.clone(),
-                    (None, Some(r)) => r.clone(),
+                    (Some(l), Some(r)) => l.value.int_lub(&r.value),
+                    (Some(l), None) => l.value.clone(),
+                    (None, Some(r)) => r.value.clone(),
                     (None, None) => AbstractInterval::Top,
                 };
-                new_variables.insert(key.clone(), union_interval);
+                new_variables.insert(key.clone(), AbstractDomain::new(union_interval));
             }
             AbstractState {
                 is_bottom: false,
@@ -804,13 +809,13 @@ impl BooleanExpression for Or {
                 let right_interval = right_eval.variables.get(key);
                 //combine them using the interval intersection
                 let intersec_interval = match (left_interval, right_interval) {
-                    (Some(l), Some(r)) => l.intersect(r),
-                    (Some(l), None) => l.clone(),
-                    (None, Some(r)) => r.clone(),
+                    (Some(l), Some(r)) => l.value.intersect(&r.value),
+                    (Some(l), None) => l.value.clone(),
+                    (None, Some(r)) => r.value.clone(),
                     (None, None) => AbstractInterval::Top,
                 };
 
-                new_variables.insert(key.clone(), intersec_interval);
+                new_variables.insert(key.clone(), AbstractDomain::new(intersec_interval));
             }
 
             AbstractState {
@@ -850,12 +855,13 @@ impl BooleanExpression for Not {
             let expr_interval = expr_eval.variables.get(key);
 
             let neg_interval = match expr_interval {
-                Some(i) => -(*i),
+                Some(i) => -(i.value),
                 None => AbstractInterval::Top,
             };
 
-            new_variables.insert(key.clone(), neg_interval);
+            new_variables.insert(key.clone(), AbstractDomain::new(neg_interval));
         }
+    
         let negated_state = AbstractState {
             is_bottom: false,
             variables: new_variables,

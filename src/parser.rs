@@ -1,3 +1,5 @@
+use crate::abstract_domain;
+use crate::abstract_interval::AbstractInterval;
 use crate::{abstract_state, ANALYSIS_FLAG};
 use crate::ast::{arithmetic::*, boolean::*, statement::*, State};
 use crate::lexer::Lexer;
@@ -2116,26 +2118,29 @@ pub fn analyze(program: String) {
     //EVALUATING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     // evaluate the final statement
+    let interval: AbstractInterval = AbstractInterval::new_top();
+    //let mut abs_domain = abstract_domain::AbstractDomain::new(interval);
     let mut abs_state = abstract_state::AbstractState::new();
     let mut state = State::new();
     println!("INITIAL PROGRAM STATE : {:#?}", state.clone());
 
-    let analysis =ANALYSIS_FLAG.lock().unwrap();
-    if *analysis == 1 {
+    let analysis_type = *ANALYSIS_FLAG.lock().expect("Failed to lock analysis flag");
+
+    if analysis_type == 1 {
+        println!("DENOTATIONAL SEMANTICS ANALYSIS");
         if let Some(last_node) = any_vec.nodes.last() {
             if let Some(statement) = last_node.as_statement() {
                 let new_state =statement.evaluate(&mut state);
                 println!("state printing after code evaluation {:#?}", new_state.clone());
             }
         }
-    }
-    if *analysis == 2 {
+    } else {
+        println!("ABSTRACT SEMANTICS ANALYSIS");
         if let Some(last_node) = any_vec.nodes.last() {
             if let Some(statement) = last_node.as_statement() {
                 let new_state =statement.abs_evaluate(&mut abs_state);
-                println!("state printing after code evaluation {:#?}", new_state.clone());
+                //println!("state printing after code evaluation {:#?}", new_state.clone());
             }
         }
     }
-    
 }
