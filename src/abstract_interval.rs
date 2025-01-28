@@ -1,4 +1,4 @@
-use num_traits:: Zero;
+use num_traits::Zero;
 use std::cmp::{Ordering, PartialOrd};
 use std::fmt::{self, Display};
 use std::ops::{Add, Div, Mul, Neg, Sub};
@@ -99,7 +99,7 @@ impl AbstractDomainOps for AbstractInterval {
         //     (AbstractInterval::Top, other) | (other, AbstractInterval::Top) => other.clone(),
         // }
         self.intersect(other)
-        }
+    }
 
     fn widening(&self, other: &Self) -> Self {
         // Esegui una logica di widening, ad esempio un'unione di intervalli
@@ -571,53 +571,55 @@ impl Div for AbstractInterval {
     type Output = Self;
 
     fn div(self, other: Self) -> Self::Output {
+        let m =*M.lock().unwrap();
+        let n = *N.lock().unwrap();
+        if m==n {
+            Self::Bounded { lower: m, upper: m }
+        }
+        else {
         match (self, other) {
-            (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom,
-            (Self::Top, _) | (_, Self::Top) => Self::Top,
-            (Self::Bounded {lower: l1, upper: u1,}, Self::Bounded {lower: l2,upper: u2}) => {
-                let m = *M.lock().unwrap();
-                let n = *N.lock().unwrap();
-                if m == n {
-                    let new_lower = m;
-                    let new_upper = m;
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
-                } else {
-                    if l2 <= i64::zero() && i64::zero() <= u2 {
-                        println!("DIVISION BY ZERO FOUND");
-                        return Self::Bottom; // Errore runtime
-                    }
-                    let candidates = [
-                        checked_div(l1, l2),
-                        checked_div(l1, u2),
-                        checked_div(u1, l2),
-                        checked_div(u1, u2),
-                    ];
+            (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom, // ⊥ / qualsiasi = ⊥
+            (Self::Top, Self::Top) => Self::Top, // ⊤ / ⊤ = ⊤
+            (Self::Top, Self::Bounded { lower, upper }) if lower == 0 && upper == 0 => Self::Bottom, // ⊤ / [0,0] = ⊥ ✅
+            (Self::Top, _) => Self::Top, // ⊤ / qualsiasi ≠ [0,0] = ⊤ ✅
+            (_, Self::Top) => Self::Top, // qualsiasi / ⊤ = ⊤ ✅
+            (Self::Bounded { lower: l1, upper: u1 }, Self::Bounded { lower: l2, upper: u2 }) => {
+                if l2 == 0 && u2 == 0 {
+                    return Self::Bottom; // [l,u] / [0,0] = ⊥ ✅
+                }
 
-                    let new_lower = candidates
-                        .iter()
-                        .filter_map(|&x| Some(x)) // Filter correct results
-                        .min() // Find minimum
-                        .unwrap_or(min_value()); // If everything fails return M
+                if l2 < 0 && u2 > 0 {
+                    return Self::Top; // [l,u] / [l',u'] con l' < 0 < u' = ⊤ ✅
+                }
 
-                    let new_upper = candidates
-                        .iter()
-                        .filter_map(|&x| Some(x)) // Filter correct results
-                        .max() // Find maximum
-                        .unwrap_or(max_value()); //If everything fails return N
+                let candidates = [
+                    checked_div(l1, l2),
+                    checked_div(l1, u2),
+                    checked_div(u1, l2),
+                    checked_div(u1, u2),
+                ];
 
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
+                let new_lower = candidates
+                    .iter()
+                    .filter_map(|&x| Some(x)) // Rimuove gli Option::None
+                    .min()
+                    .unwrap_or(m);
+
+                let new_upper = candidates
+                    .iter()
+                    .filter_map(|&x| Some(x))
+                    .max()
+                    .unwrap_or(n);
+
+                Self::Bounded {
+                    lower: new_lower,
+                    upper: new_upper,
                 }
             }
         }
     }
+    }
 }
-
 fn checked_div(a: i64, b: i64) -> i64 {
     let m = *M.lock().unwrap();
     let n = *N.lock().unwrap();
