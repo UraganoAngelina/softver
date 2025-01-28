@@ -1,5 +1,3 @@
-use crate::abstract_domain;
-use crate::abstract_interval::AbstractInterval;
 use crate::{abstract_state, ANALYSIS_FLAG};
 use crate::ast::{arithmetic::*, boolean::*, statement::*, State};
 use crate::lexer::Lexer;
@@ -2118,7 +2116,7 @@ pub fn analyze(program: String) {
     //EVALUATING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     // evaluate the final statement
-    let interval: AbstractInterval = AbstractInterval::new_top();
+    // let interval: AbstractInterval = AbstractInterval::new_top();
     //let mut abs_domain = abstract_domain::AbstractDomain::new(interval);
     let mut abs_state = abstract_state::AbstractState::new();
     let mut state = State::new();
@@ -2138,7 +2136,7 @@ pub fn analyze(program: String) {
         println!("ABSTRACT SEMANTICS ANALYSIS");
         if let Some(last_node) = any_vec.nodes.last() {
             if let Some(statement) = last_node.as_statement() {
-                let new_state =statement.abs_evaluate(&mut abs_state);
+                statement.abs_evaluate(&mut abs_state);
                 //println!("state printing after code evaluation {:#?}", new_state.clone());
             }
         }

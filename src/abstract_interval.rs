@@ -1,6 +1,6 @@
 use num_traits::Zero;
 use std::cmp::{Ordering, PartialOrd};
-use std::fmt::{self, Display};
+use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::M;
