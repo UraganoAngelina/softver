@@ -49,8 +49,6 @@ impl AbstractState {
             return self.bottom();
         }
 
-        //println!("state before update {}", self);
-
         // Recupera l'intervallo corrente della variabile, se esiste
         let current_domain = self
             .variables
@@ -58,14 +56,10 @@ impl AbstractState {
             .cloned()
             .unwrap_or_else(|| AbstractDomain::new(AbstractInterval::Top));  // Top per default
 
-        //println!("arrivo qui");
-
         // Interseca l'intervallo corrente con quello nuovo
         let updated_interval = current_domain
             .get_value()
             .intersect(&new_interval);
-
-        //println!("arrivo qui {}", updated_interval);
 
         // Se il risultato è Bottom, impostare lo stato a bottom
         if updated_interval.is_bottom() {
@@ -77,8 +71,6 @@ impl AbstractState {
             variable_name.to_string(),
             AbstractDomain::new(updated_interval),
         );
-
-        //println!("state updated {}", self);
 
         // Restituisce lo stato aggiornato
         self.clone()
@@ -100,7 +92,7 @@ impl AbstractState {
                 // Interval Lub for every variable
                 new_variables.insert(
                     key.clone(),
-                    AbstractDomain::new(left_domain.get_value().int_lub(&right_domain.get_value())),
+                    AbstractDomain::new(left_domain.lub(right_domain).value),
                 );
             } else {
                 new_variables.insert(key.clone(), AbstractDomain::new(left_domain.value.clone()));
@@ -175,8 +167,6 @@ impl AbstractState {
                 variables: HashMap::new(),
             };
         }
-        // println!("narrow state 1 {}", self);
-        // println!("narrow state 2 {}", other);
         let mut new_variables: HashMap<String, AbstractDomain<AbstractInterval>> = HashMap::new();
 
         for (key, left_interval) in &self.variables {
@@ -198,7 +188,6 @@ impl AbstractState {
             is_bottom: false, // Lo stato risultante non è Bottom
             variables: new_variables,
         };
-        //println!("narrow result {}", newstate);
         newstate
     }
 }

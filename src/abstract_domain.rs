@@ -3,7 +3,12 @@ use std::fmt::Display;
 
 use num_traits::Zero;
 
-use crate::abstract_interval::AbstractDomainOps;
+
+pub trait AbstractDomainOps {
+    fn lub(&self, other: &Self) -> Self;
+    fn widening(&self, other: &Self) -> Self;
+    fn narrowing(&self, other: &Self) -> Self;
+}
 #[derive(Debug, Clone, Copy)]
 pub struct AbstractDomain<M> {
     pub value: M,
@@ -17,22 +22,10 @@ impl<M: AbstractDomainOps> AbstractDomain<M> {
         &self.value
     }
 
-    // Relazione di ordine parziale
-    fn partial_order(&self, other: &Self) -> bool {
-        self.value.partial_order(&other.value)
-    }
-
     // Least upper bound (lub)
     pub fn lub(&self, other: &Self) -> Self {
         AbstractDomain {
             value: self.value.lub(&other.value),
-        }
-    }
-
-    // Greatest lower bound (glb)
-    pub fn glb(&self, other: &Self) -> Self {
-        AbstractDomain {
-            value: self.value.glb(&other.value),
         }
     }
 

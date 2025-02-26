@@ -2,6 +2,8 @@ use crate::abstract_domain::AbstractDomain;
 use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::State;
+use crate::{M, N};
+use crate::CONSTANTS_VECTOR;
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -35,6 +37,10 @@ impl ArithmeticExpression for Numeral {
         self.0.to_string()
     }
     fn abs_evaluate(&self, _abs_state: &mut AbstractState) -> AbstractInterval {
+        let mut constant = CONSTANTS_VECTOR.lock().expect("FAILED TO LOCK THE CONSTANT VECTOR");
+        //put the constant in the dedicated vector for threshold widening 
+        constant.push(self.0.clone());
+        //return a constant interval
         AbstractInterval::new(self.0, self.0)
     }
 }
@@ -57,8 +63,6 @@ impl ArithmeticExpression for Variable {
         Some(self)
     }
     fn evaluate(&self, state: &mut State) -> i64 {
-        // println!("searching for variable {}" , self.value);
-        // println!("state situation {:#?}", state);
         *state
             .get(&self.value)
             .expect("Variable  not found in the state!")
@@ -67,14 +71,10 @@ impl ArithmeticExpression for Variable {
         self.value.clone()
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
-        // println!("searching for variable {}", self.value);
-        // println!("state situation {}", abs_state);
-        
         let res=*abs_state
             .variables
             .get(&self.value)
             .expect("Variable not found in the abstract state!");
-        //println!("res {}", res.value);
         return res.value
     }
 }
@@ -266,13 +266,15 @@ impl ArithmeticExpression for PlusPlus {
         format!("{}++", self.var.to_string())
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+        let m = *M.lock().unwrap();
+        let n = *N.lock().unwrap();
         let value = self.var.abs_evaluate(abs_state);
         match value {
             AbstractInterval::Bottom => AbstractInterval::Bottom,
             AbstractInterval::Top => AbstractInterval::Top,
             AbstractInterval::Bounded { lower, upper } => {
-                if upper < i64::max_value() {
-                    if lower > i64::min_value() {
+                if upper < n {
+                    if lower > m {
                         let newupper = upper + 1;
                         let new_interval = AbstractInterval::new(lower, newupper);
                         let new_value = AbstractDomain::new(new_interval);
@@ -307,14 +309,8 @@ impl ArithmeticExpression for MinusMinus {
     fn evaluate(&self, state: &mut State) -> i64 {
         //Variable evaluation -> i64
         let mut value = self.var.evaluate(state);
-        println!(
-            "value in assign eval {:?}, for var {:?}",
-            value,
-            self.var.clone_box()
-        );
         value -= 1;
         state.insert(self.var.clone_box().to_string(), value);
-        println!("state after plus plus evaluation: {:?}", state);
         value
     }
     fn as_variable(&self) -> Option<&Variable> {
@@ -324,13 +320,15 @@ impl ArithmeticExpression for MinusMinus {
         format!("{}--", self.var.to_string())
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+        let m = *M.lock().unwrap();
+        let n = *N.lock().unwrap();
         let value = self.var.abs_evaluate(abs_state);
         match value {
             AbstractInterval::Bottom => AbstractInterval::Bottom,
             AbstractInterval::Top => AbstractInterval::Top,
             AbstractInterval::Bounded { lower, upper } => {
-                if upper < i64::max_value() {
-                    if lower > i64::min_value() {
+                if upper < n {
+                    if lower > m {
                         let newlower = lower - 1;
                         let new_interval = AbstractInterval::new(newlower, upper);
                         let new_value = AbstractDomain::new(new_interval);
