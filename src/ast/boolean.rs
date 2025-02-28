@@ -217,104 +217,104 @@ impl BooleanExpression for GreatEqual {
     }
     fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
         // devo trasformare x >= y in y <= x
-         let leq = LessEqual{left: self.left.clone_box(), right:self.right.clone_box()};
-         leq.abs_evaluate(state, flag)
-        // if !flag {
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
+        //  let leq = LessEqual{left: self.left.clone_box(), right:self.right.clone_box()};
+        //  leq.abs_evaluate(state, flag)
+        if !flag {
+            if state.is_bottom() {
+                return AbstractState::bottom(state);
+            }
 
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
+            let left_eval = self.left.abs_evaluate(state);
+            let right_eval = self.right.abs_evaluate(state);
 
-        //     match (left_eval, right_eval) {
-        //         // Caso base: uno dei due è Bottom
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
+            match (left_eval, right_eval) {
+                // Caso base: uno dei due è Bottom
+                (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
+                    AbstractState::bottom(state)
+                }
 
-        //         // Caso concreto: Entrambi gli intervalli sono bounded
-        //         (
-        //             AbstractInterval::Bounded {
-        //                 lower: l1,
-        //                 upper: u1,
-        //             },
-        //             AbstractInterval::Bounded {
-        //                 lower: l2,
-        //                 upper: _,
-        //             },
-        //         ) => {
-        //             if let Some(var_name) = self.left.as_variable() {
-        //                 if u1 >= l2 {
-        //                     // Aggiorniamo l'intervallo della variabile sinistra
-        //                     state.update_interval(
-        //                         &var_name.value,
-        //                         AbstractInterval::Bounded {
-        //                             lower: std::cmp::max(l1, l2),
-        //                             upper: u1,
-        //                         },
-        //                     );
-        //                     state.clone()
-        //                 } else {
-        //                     // Non soddisfatto: Bottom
-        //                     AbstractState::bottom(state)
-        //                 }
-        //             } else {
-        //                 // Se il lato sinistro non è una variabile, errore logico
-        //                 unreachable!("Left operand of >= must be a variable!");
-        //             }
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //     }
-        // } else {
-        //     //eseguo operatore <
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
+                // Caso concreto: Entrambi gli intervalli sono bounded
+                (
+                    AbstractInterval::Bounded {
+                        lower: l1,
+                        upper: u1,
+                    },
+                    AbstractInterval::Bounded {
+                        lower: l2,
+                        upper: _,
+                    },
+                ) => {
+                    if let Some(var_name) = self.left.as_variable() {
+                        if u1 >= l2 {
+                            // Aggiorniamo l'intervallo della variabile sinistra
+                            state.update_interval(
+                                &var_name.value,
+                                AbstractInterval::Bounded {
+                                    lower: std::cmp::max(l1, l2),
+                                    upper: u1,
+                                },
+                            );
+                            state.clone()
+                        } else {
+                            // Non soddisfatto: Bottom
+                            AbstractState::bottom(state)
+                        }
+                    } else {
+                        // Se il lato sinistro non è una variabile, errore logico
+                        unreachable!("Left operand of >= must be a variable!");
+                    }
+                }
+                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
+            }
+        } else {
+            //eseguo operatore <
+            if state.is_bottom() {
+                return AbstractState::bottom(state);
+            }
 
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
+            let left_eval = self.left.abs_evaluate(state);
+            let right_eval = self.right.abs_evaluate(state);
 
-        //     match (left_eval, right_eval) {
-        //         // Caso base: uno dei due è Bottom
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
+            match (left_eval, right_eval) {
+                // Caso base: uno dei due è Bottom
+                (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
+                    AbstractState::bottom(state)
+                }
 
-        //         // Caso concreto: Entrambi gli intervalli sono bounded
-        //         (
-        //             AbstractInterval::Bounded {
-        //                 lower: l1,
-        //                 upper: u1,
-        //             },
-        //             AbstractInterval::Bounded {
-        //                 lower: _,
-        //                 upper: u2,
-        //             },
-        //         ) => {
-        //             if let Some(var_name) = self.left.as_variable() {
-        //                 if l1 < u2 {
-        //                     // Aggiorniamo l'intervallo della variabile sinistra
-        //                     state.update_interval(
-        //                         &var_name.value,
-        //                         AbstractInterval::Bounded {
-        //                             lower: l1,
-        //                             upper: std::cmp::min(u1, u2),
-        //                         },
-        //                     );
-        //                     state.clone()
-        //                 } else {
-        //                     // Non soddisfatto: Bottom
-        //                     AbstractState::bottom(state)
-        //                 }
-        //             } else {
-        //                 // Se il lato sinistro non è una variabile, errore logico
-        //                 unreachable!("Left operand of < must be a variable");
-        //             }
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //     }
-        // }
+                // Caso concreto: Entrambi gli intervalli sono bounded
+                (
+                    AbstractInterval::Bounded {
+                        lower: l1,
+                        upper: u1,
+                    },
+                    AbstractInterval::Bounded {
+                        lower: _,
+                        upper: u2,
+                    },
+                ) => {
+                    if let Some(var_name) = self.left.as_variable() {
+                        if l1 < u2 {
+                            // Aggiorniamo l'intervallo della variabile sinistra
+                            state.update_interval(
+                                &var_name.value,
+                                AbstractInterval::Bounded {
+                                    lower: l1,
+                                    upper: std::cmp::min(u1, u2),
+                                },
+                            );
+                            state.clone()
+                        } else {
+                            // Non soddisfatto: Bottom
+                            AbstractState::bottom(state)
+                        }
+                    } else {
+                        // Se il lato sinistro non è una variabile, errore logico
+                        unreachable!("Left operand of < must be a variable");
+                    }
+                }
+                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
+            }
+        }
     }
     fn to_string(&self) -> String {
         format!("{} >= {}", self.left.to_string(), self.right.to_string())
@@ -337,109 +337,110 @@ impl BooleanExpression for Great {
     }
     fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
         // transforming x > y into y+1 <= x
-        let left_op = Box::new(Add{left: self.right.clone_box(), right: Box::new(Numeral(1))});
-        let leq = LessEqual{left: left_op.clone_box(), right:self.left.clone_box()};
-        leq.abs_evaluate(state, flag)
+        // let left_op = Box::new(Add{left: self.right.clone_box(), right: Box::new(Numeral(1))});
+        // let leq = LessEqual{left: left_op.clone_box(), right:self.left.clone_box()};
+        // leq.abs_evaluate(state, flag)
 
-        // if !flag {
-        //     // println!("> FOUND");
-        //     // println!("> INPUT STATE : {}", state);
-        //     if state.is_bottom() {
-        //         //println!("mi blocco qui?");
-        //         return AbstractState::bottom(state);
-        //     }
-        //     //println!("dio mega merda");
-        //     let left_eval = self.left.abs_evaluate(&mut state.clone());
-        //     //print!("speriamo che non si incastri qui {}", left_eval);
-        //     let right_eval = self.right.abs_evaluate(&mut state.clone());
-        //     //print!("speriamo che non si incastri nemmeno qui {}", right_eval);
-        //     match (left_eval, right_eval) {
-        //         // Caso base: uno dei due è Bottom
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
+        if !flag {
+             println!("> FOUND");
+             println!("> INPUT STATE : {}", state);
+            if state.is_bottom() {
+                println!("mi blocco qui?");
+                return AbstractState::bottom(state);
+            }
+            //println!("dio mega merda");
+            let left_eval = self.left.abs_evaluate(&mut state.clone());
+            print!("speriamo che non si incastri qui ");
+            let right_eval = self.right.abs_evaluate(&mut state.clone());
+            print!("speriamo che non si incastri nemmeno qui ");
+            match (left_eval, right_eval) {
+                // Caso base: uno dei due è Bottom
+                (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
+                    AbstractState::bottom(state)
+                }
 
-        //         // Caso concreto: Entrambi gli intervalli sono bounded
-        //         (
-        //             AbstractInterval::Bounded {
-        //                 lower: l1,
-        //                 upper: u1,
-        //             },
-        //             AbstractInterval::Bounded {
-        //                 lower: l2,
-        //                 upper: _,
-        //             },
-        //         ) => {
-        //             if let Some(var_name) = self.left.as_variable() {
-        //                 if u1 > l2 {
-        //                     // Aggiorniamo l'intervallo della variabile sinistra
-        //                     state.update_interval(
-        //                         &var_name.value,
-        //                         AbstractInterval::Bounded {
-        //                             lower: std::cmp::max(l1, l2-1),
-        //                             upper: u1,
-        //                         },
-        //                     );
-        //                     state.clone()
-        //                 } else {
-        //                     // Non soddisfatto: Bottom
-        //                     AbstractState::bottom(state)
-        //                 }
-        //             } else {
-        //                 // Se il lato sinistro non è una variabile, errore logico
-        //                 unreachable!("Left operand of > must be a variable!");
-        //             }
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //     }
-        // } else {
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
+                // Caso concreto: Entrambi gli intervalli sono bounded
+                (
+                    AbstractInterval::Bounded {
+                        lower: l1,
+                        upper: u1,
+                    },
+                    AbstractInterval::Bounded {
+                        lower: l2,
+                        upper: _,
+                    },
+                ) => {
+                    if let Some(var_name) = self.left.as_variable() {
+                        if u1 > l2 {
+                            // Aggiorniamo l'intervallo della variabile sinistra
+                            state.update_interval(
+                                &var_name.value,
+                                AbstractInterval::Bounded {
+                                    lower: std::cmp::max(l1, l2-1),
+                                    upper: u1,
+                                },
+                            );
+                            println!("returning state in > {}", state);
+                            state.clone()
+                        } else {
+                            // Non soddisfatto: Bottom
+                            AbstractState::bottom(state)
+                        }
+                    } else {
+                        // Se il lato sinistro non è una variabile, errore logico
+                        unreachable!("Left operand of > must be a variable!");
+                    }
+                }
+                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => {println!("returning state {}", state ); state.clone()},
+            }
+        } else {
+            if state.is_bottom() {
+                return AbstractState::bottom(state);
+            }
 
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
+            let left_eval = self.left.abs_evaluate(state);
+            let right_eval = self.right.abs_evaluate(state);
 
-        //     match (left_eval, right_eval) {
-        //         // Caso base: uno dei due è Bottom
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
+            match (left_eval, right_eval) {
+                // Caso base: uno dei due è Bottom
+                (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
+                    AbstractState::bottom(state)
+                }
 
-        //         // Caso concreto: Entrambi gli intervalli sono bounded
-        //         (
-        //             AbstractInterval::Bounded {
-        //                 lower: l1,
-        //                 upper: u1,
-        //             },
-        //             AbstractInterval::Bounded {
-        //                 lower: _,
-        //                 upper: u2,
-        //             },
-        //         ) => {
-        //             if let Some(var_name) = self.left.as_variable() {
-        //                 if l1 <= u2 {
-        //                     // Aggiorniamo l'intervallo della variabile sinistra
-        //                     state.update_interval(
-        //                         &var_name.value,
-        //                         AbstractInterval::Bounded {
-        //                             lower: l1,
-        //                             upper: std::cmp::min(u1, u2),
-        //                         },
-        //                     );
-        //                     state.clone()
-        //                 } else {
-        //                     // Non soddisfatto: Bottom
-        //                     AbstractState::bottom(state)
-        //                 }
-        //             } else {
-        //                 // Se il lato sinistro non è una variabile, errore logico
-        //                 unreachable!("Left operand of <= must be a variable!");
-        //             }
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //     }
-        // }
+                // Caso concreto: Entrambi gli intervalli sono bounded
+                (
+                    AbstractInterval::Bounded {
+                        lower: l1,
+                        upper: u1,
+                    },
+                    AbstractInterval::Bounded {
+                        lower: _,
+                        upper: u2,
+                    },
+                ) => {
+                    if let Some(var_name) = self.left.as_variable() {
+                        if l1 <= u2 {
+                            // Aggiorniamo l'intervallo della variabile sinistra
+                            state.update_interval(
+                                &var_name.value,
+                                AbstractInterval::Bounded {
+                                    lower: l1,
+                                    upper: std::cmp::min(u1, u2),
+                                },
+                            );
+                            state.clone()
+                        } else {
+                            // Non soddisfatto: Bottom
+                            AbstractState::bottom(state)
+                        }
+                    } else {
+                        // Se il lato sinistro non è una variabile, errore logico
+                        unreachable!("Left operand of <= must be a variable!");
+                    }
+                }
+                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
+            }
+        }
     }
     fn to_string(&self) -> String {
         format!("{} > {}", self.left.to_string(), self.right.to_string())
@@ -614,106 +615,106 @@ impl BooleanExpression for Less {
     }
     fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
         // transforming x < y into x+1 <= y
-        let  left_op =Box::new(Add{left: self.left.clone_box(), right :Box::new(Numeral(1))});
-        let  leq = LessEqual{left: left_op, right: self.right.clone_box()};
-        leq.abs_evaluate(state, flag)
+        // let  left_op =Box::new(Add{left: self.left.clone_box(), right :Box::new(Numeral(1))});
+        // let  leq = LessEqual{left: left_op, right: self.right.clone_box()};
+        // leq.abs_evaluate(state, flag)
 
 
-        // if !flag {
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
+        if !flag {
+            if state.is_bottom() {
+                return AbstractState::bottom(state);
+            }
 
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
+            let left_eval = self.left.abs_evaluate(state);
+            let right_eval = self.right.abs_evaluate(state);
 
-        //     match (left_eval, right_eval) {
-        //         // Caso base: uno dei due è Bottom
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
+            match (left_eval, right_eval) {
+                // Caso base: uno dei due è Bottom
+                (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
+                    AbstractState::bottom(state)
+                }
 
-        //         // Caso concreto: Entrambi gli intervalli sono bounded
-        //         (
-        //             AbstractInterval::Bounded {
-        //                 lower: l1,
-        //                 upper: u1,
-        //             },
-        //             AbstractInterval::Bounded {
-        //                 lower: _,
-        //                 upper: u2,
-        //             },
-        //         ) => {
-        //             if let Some(var_name) = self.left.as_variable() {
-        //                 if l1 < u2 {
-        //                     // Aggiorniamo l'intervallo della variabile sinistra
-        //                     state.update_interval(
-        //                         &var_name.value,
-        //                         AbstractInterval::Bounded {
-        //                             lower: l1,
-        //                             upper: std::cmp::min(u1, u2-1),
-        //                         },
-        //                     );
-        //                     state.clone()
-        //                 } else {
-        //                     // Non soddisfatto: Bottom
-        //                     AbstractState::bottom(state)
-        //                 }
-        //             } else {
-        //                 // Se il lato sinistro non è una variabile, errore logico
-        //                 unreachable!("Left operand of < must be a variable");
-        //             }
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //     }
-        // } else {
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
+                // Caso concreto: Entrambi gli intervalli sono bounded
+                (
+                    AbstractInterval::Bounded {
+                        lower: l1,
+                        upper: u1,
+                    },
+                    AbstractInterval::Bounded {
+                        lower: _,
+                        upper: u2,
+                    },
+                ) => {
+                    if let Some(var_name) = self.left.as_variable() {
+                        if l1 < u2 {
+                            // Aggiorniamo l'intervallo della variabile sinistra
+                            state.update_interval(
+                                &var_name.value,
+                                AbstractInterval::Bounded {
+                                    lower: l1,
+                                    upper: std::cmp::min(u1, u2-1),
+                                },
+                            );
+                            state.clone()
+                        } else {
+                            // Non soddisfatto: Bottom
+                            AbstractState::bottom(state)
+                        }
+                    } else {
+                        // Se il lato sinistro non è una variabile, errore logico
+                        unreachable!("Left operand of < must be a variable");
+                    }
+                }
+                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
+            }
+        } else {
+            if state.is_bottom() {
+                return AbstractState::bottom(state);
+            }
 
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
+            let left_eval = self.left.abs_evaluate(state);
+            let right_eval = self.right.abs_evaluate(state);
 
-        //     match (left_eval, right_eval) {
-        //         // Caso base: uno dei due è Bottom
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
+            match (left_eval, right_eval) {
+                // Caso base: uno dei due è Bottom
+                (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
+                    AbstractState::bottom(state)
+                }
 
-        //         // Caso concreto: Entrambi gli intervalli sono bounded
-        //         (
-        //             AbstractInterval::Bounded {
-        //                 lower: l1,
-        //                 upper: u1,
-        //             },
-        //             AbstractInterval::Bounded {
-        //                 lower: l2,
-        //                 upper: _,
-        //             },
-        //         ) => {
-        //             if let Some(var_name) = self.left.as_variable() {
-        //                 if u1 >= l2 {
-        //                     // Aggiorniamo l'intervallo della variabile sinistra
-        //                     state.update_interval(
-        //                         &var_name.value,
-        //                         AbstractInterval::Bounded {
-        //                             lower: std::cmp::max(l1, l2),
-        //                             upper: u1,
-        //                         },
-        //                     );
-        //                     state.clone()
-        //                 } else {
-        //                     // Non soddisfatto: Bottom
-        //                     AbstractState::bottom(state)
-        //                 }
-        //             } else {
-        //                 // Se il lato sinistro non è una variabile, errore logico
-        //                 unreachable!("Left operand of >= must be a variable!");
-        //             }
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //     }
-        // }
+                // Caso concreto: Entrambi gli intervalli sono bounded
+                (
+                    AbstractInterval::Bounded {
+                        lower: l1,
+                        upper: u1,
+                    },
+                    AbstractInterval::Bounded {
+                        lower: l2,
+                        upper: _,
+                    },
+                ) => {
+                    if let Some(var_name) = self.left.as_variable() {
+                        if u1 >= l2 {
+                            // Aggiorniamo l'intervallo della variabile sinistra
+                            state.update_interval(
+                                &var_name.value,
+                                AbstractInterval::Bounded {
+                                    lower: std::cmp::max(l1, l2),
+                                    upper: u1,
+                                },
+                            );
+                            state.clone()
+                        } else {
+                            // Non soddisfatto: Bottom
+                            AbstractState::bottom(state)
+                        }
+                    } else {
+                        // Se il lato sinistro non è una variabile, errore logico
+                        unreachable!("Left operand of >= must be a variable!");
+                    }
+                }
+                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
+            }
+        }
     }
     fn to_string(&self) -> String {
         format!("{} < {}", self.left.to_string(), self.right.to_string())

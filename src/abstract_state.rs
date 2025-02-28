@@ -121,12 +121,18 @@ impl AbstractState {
             return self.clone();
         }
 
-        if self.is_top() || other.is_top() {
-            return AbstractState {
-                is_bottom: false,
-                variables: HashMap::new(),
-            };
-        }
+        // if self.is_top(){
+        //     return AbstractState{
+        //         is_bottom: false,
+        //         variables: 
+        //     }
+        // }
+        // if self.is_top() || other.is_top() {
+        //     return AbstractState {
+        //         is_bottom: false,
+        //         variables: HashMap::new(),
+        //     };
+        // }
 
         let mut new_variables: HashMap<String, AbstractDomain<AbstractInterval>> = HashMap::new();
 
@@ -161,12 +167,12 @@ impl AbstractState {
             return self.clone();
         }
 
-        if self.is_top() || other.is_top() {
-            return AbstractState {
-                is_bottom: false,
-                variables: HashMap::new(),
-            };
-        }
+        // if self.is_top() || other.is_top() {
+        //     return AbstractState {
+        //         is_bottom: false,
+        //         variables: HashMap::new(),
+        //     };
+        // }
         let mut new_variables: HashMap<String, AbstractDomain<AbstractInterval>> = HashMap::new();
 
         for (key, left_interval) in &self.variables {

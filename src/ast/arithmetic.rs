@@ -1,4 +1,4 @@
-use crate::abstract_domain::AbstractDomain;
+use crate::abstract_domain::{self, AbstractDomain};
 use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::State;
@@ -71,6 +71,8 @@ impl ArithmeticExpression for Variable {
         self.value.clone()
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+        println!("STATE SITUATION {}", abs_state);
+        println!("SEARCH FOR {}", self.value);
         let res=*abs_state
             .variables
             .get(&self.value)
@@ -281,12 +283,21 @@ impl ArithmeticExpression for PlusPlus {
                         abs_state
                             .variables
                             .insert(self.var.to_string(), new_value);
+                        println!("state print in plus plus {}", abs_state);
                         new_interval
                     } else {
-                        AbstractInterval::Top
+                        let new_int= AbstractInterval::new(m, upper);
+                        abs_state
+                            .variables
+                            .insert(self.var.to_string(), abstract_domain::AbstractDomain { value: new_int  });
+                        new_int
                     }
                 } else {
-                    AbstractInterval::Top
+                    let new_int= AbstractInterval::new(lower, n);
+                    abs_state
+                            .variables
+                            .insert(self.var.to_string(), abstract_domain::AbstractDomain { value: new_int });
+                    new_int
                 }
             }
         }
@@ -327,8 +338,8 @@ impl ArithmeticExpression for MinusMinus {
             AbstractInterval::Bottom => AbstractInterval::Bottom,
             AbstractInterval::Top => AbstractInterval::Top,
             AbstractInterval::Bounded { lower, upper } => {
-                if upper < n {
-                    if lower > m {
+                if lower> m {
+                    if upper< n {
                         let newlower = lower - 1;
                         let new_interval = AbstractInterval::new(newlower, upper);
                         let new_value = AbstractDomain::new(new_interval);
@@ -337,10 +348,14 @@ impl ArithmeticExpression for MinusMinus {
                             .insert(self.var.to_string(), new_value);
                         new_interval
                     } else {
-                        AbstractInterval::Top
+                        let new_int =AbstractInterval::new(m, upper);
+                        abs_state.variables.insert(self.var.to_string(), abstract_domain::AbstractDomain::new(new_int));
+                        new_int
                     }
                 } else {
-                    AbstractInterval::Top
+                    let new_int=AbstractInterval::new(lower, n);
+                    abs_state.variables.insert(self.var.to_string(), abstract_domain::AbstractDomain::new(new_int));
+                    new_int
                 }
             }
         }

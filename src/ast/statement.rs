@@ -186,33 +186,43 @@ impl Statement for While {
         let mut _prev_state = state.clone();
         let mut current_state = state.clone();
         loop {
-            _guard_result = self.guard.abs_evaluate(&mut current_state, false);
-            _body_result = self.body.abs_evaluate(&mut _guard_result);
-            _body_result = _prev_state.state_lub(&_body_result);
-
-            if *wid == true {current_state = _prev_state.state_widening(&_body_result);}
+            //println!("entrance current state {}", current_state);
+            _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
+            //println!("STATE AFTER GUARD {}", _guard_result.clone());
+            _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
+            _body_result = _prev_state.state_lub(&_body_result.clone());
+            // println!("STATE AFTER ITERATION {}", _body_result.clone());
+            // println!("current state after iter {}", current_state);
+            if *wid == true {current_state = _prev_state.state_widening(&_body_result.clone());}
             // Fixpoint check
-            if current_state == _prev_state {
+            if current_state.clone() == _prev_state.clone() {
                 break;
             }
+            //println!("current state after widening {}", current_state);
             _prev_state = current_state.clone();
         }
         println!("CYCLE INVARIANT: {}", current_state);
         _prev_state=precondition.clone();
         loop {
+            println!("narrowing entrance current state {}", current_state.clone());
             _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
+            println!("STATE AFTER GUARD IN NARROW {}", _guard_result.clone());
             _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
             _body_result = _prev_state.state_lub(&_body_result.clone());
+            println!("STATE AFTER ITERATION {}", _body_result.clone());
+            println!("current state after iter {}", current_state);
 
-            current_state = current_state.state_narrowing(&_body_result.clone());
-            if current_state == _prev_state {
+            current_state = current_state.clone().state_narrowing(&_body_result.clone());
+            if current_state.clone() == _prev_state.clone() {
                 break;
             }
+            println!("current state after narrowing {}", current_state);
             _prev_state = current_state.clone();
         }
         // filtering with !guard
         let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
         state.variables.extend(postcondition.variables.clone());
+        println!("flag {}", postcondition.is_bottom());
         println!("CYCLE POSTCONDITION: {}", postcondition);
         postcondition
     }
