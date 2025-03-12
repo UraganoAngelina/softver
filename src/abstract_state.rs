@@ -23,9 +23,9 @@ impl AbstractState {
             variables: HashMap::new(),
         }
     }
-    fn is_top(&self) -> bool {
+    fn _is_top(&self) -> bool {
         // Se ci sono variabili, verificare se una di esse è Top
-        self.variables.values().any(|interval| interval.value.is_top())
+        self.variables.values().any(|interval| interval.value._is_top())
     }
     // Builds bottom state ⊥
     pub fn bottom(&self) -> AbstractState {

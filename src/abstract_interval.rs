@@ -1,13 +1,11 @@
 use num_traits::Zero;
 use std::cmp::{Ordering, PartialOrd};
-use std::fmt;
+use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::abstract_domain::AbstractDomainOps;
-use crate::{find_max, find_min, CONSTANTS_VECTOR, M};
 use crate::N;
-
-
+use crate::{find_max, find_min, CONSTANTS_VECTOR, M};
 
 #[derive(Debug, Clone, Copy, Eq)]
 pub enum AbstractInterval {
@@ -17,11 +15,9 @@ pub enum AbstractInterval {
 }
 
 impl AbstractDomainOps for AbstractInterval {
-  
     fn lub(&self, other: &Self) -> Self {
         self.int_lub(other)
     }
-
 
     fn widening(&self, other: &Self) -> Self {
         self.int_widening(other)
@@ -37,7 +33,7 @@ impl fmt::Display for AbstractInterval {
         match self {
             AbstractInterval::Bottom => write!(f, "Bottom ┴"),
             AbstractInterval::Top => write!(f, "Top ┬"),
-            AbstractInterval::Bounded { lower, upper } => write!(f, "[ {}, {}]", lower, upper),
+            AbstractInterval::Bounded { lower, upper } => write!(f, "[{}, {}]", lower, upper),
         }
     }
 }
@@ -103,7 +99,9 @@ impl AbstractInterval {
             ) => {
                 let m = *M.lock().expect("failed to lock m mutex");
                 let n = *N.lock().expect("failed to lock n mutex");
-                let mut vec =CONSTANTS_VECTOR.lock().expect("failed to lock constant vector");
+                let mut vec = CONSTANTS_VECTOR
+                    .lock()
+                    .expect("failed to lock constant vector");
                 if m == n {
                     let new_lower = m;
                     let new_upper = m;
@@ -112,19 +110,17 @@ impl AbstractInterval {
                         upper: new_upper,
                     }
                 } else {
-                    println!("first [{} , {}]", l1, u1);
-                    println!("second [{} , {}]", l2, u2);
                     let new_lower = if l1 <= &l2 {
                         *l1
-                    }else {
+                    } else {
                         //threshold research
                         find_max(&mut vec, l2.clone())
                     };
-                    
+
                     let new_upper = if u1 >= &u2 {
                         *u1
                     } else {
-                        //threshold research 
+                        //threshold research
                         find_min(&mut vec, u2.clone())
                     };
                     Self::Bounded {
@@ -177,12 +173,8 @@ impl AbstractInterval {
     pub fn intersect(&self, other: &Self) -> Self {
         // Pattern matching per gestire i casi
         match (self, other) {
-            (Self::Bottom, _) | (_, Self::Bottom) => {
-                Self::Bottom
-            }
-            (Self::Top, x) | (x, Self::Top) => {
-                x.clone()
-            }
+            (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom,
+            (Self::Top, x) | (x, Self::Top) => x.clone(),
             (
                 Self::Bounded {
                     lower: l1,
@@ -193,7 +185,6 @@ impl AbstractInterval {
                     upper: u2,
                 },
             ) => {
-
                 let m_val = *M.lock().expect("Failed to lock M");
                 let n_val = *N.lock().expect("Failed to lock N");
 
@@ -218,7 +209,7 @@ impl AbstractInterval {
             }
         }
     }
-    pub fn is_top(&self) -> bool {
+    pub fn _is_top(&self) -> bool {
         match self {
             Self::Top => true,
             _ => false,
@@ -386,7 +377,16 @@ fn checked_sub(a: i64, b: i64) -> i64 {
     let m = *M.lock().unwrap();
     let n = *N.lock().unwrap();
     match a.checked_sub(b) {
-        Some(result) => result,
+        Some(result) => {
+            if m>= result {
+                if n<= result
+                {
+                    return result
+                }
+                return n
+            }
+            return m
+         },
         None if a > i64::zero() => n,
         None => m,
     }
@@ -474,7 +474,6 @@ impl Div for AbstractInterval {
     fn div(self, other: Self) -> Self::Output {
         let m = *M.lock().unwrap();
         let n = *N.lock().unwrap();
-        //Constant propagation
         if m == n {
             Self::Bounded { lower: m, upper: m }
         } else {

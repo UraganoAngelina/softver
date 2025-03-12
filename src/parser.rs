@@ -2045,7 +2045,7 @@ pub fn analyze(program: String) {
     parse_statement(&mut any_vec, &mut index);
     clean_from_void(&mut any_vec);
 
-    println!("statements parsed: ");
+    //println!("statements parsed: ");
     let mut j = 0;
     while j < any_vec.nodes.len() {
         if any_vec.nodes[j].as_token() == None {
@@ -2065,7 +2065,7 @@ pub fn analyze(program: String) {
     let analysis_type = *ANALYSIS_FLAG.lock().expect("Failed to lock analysis flag");
 
     if analysis_type == 1 {
-        println!("DENOTATIONAL SEMANTICS ANALYSIS");
+        println!("STARTING DENOTATIONAL SEMANTICS ANALYSIS");
         if let Some(last_node) = any_vec.nodes.last() {
             if let Some(statement) = last_node.as_statement() {
                 let new_state =statement.evaluate(&mut state);
@@ -2073,7 +2073,7 @@ pub fn analyze(program: String) {
             }
         }
     } else {
-        println!("ABSTRACT SEMANTICS ANALYSIS");
+        println!("STARTING ABSTRACT SEMANTICS ANALYSIS");
         if let Some(last_node) = any_vec.nodes.last() {
             if let Some(statement) = last_node.as_statement() {
                 statement.abs_evaluate(&mut abs_state);

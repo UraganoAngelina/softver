@@ -12,7 +12,9 @@ pub trait AbstractDomainOps {
 #[derive(Debug, Clone, Copy)]
 pub struct AbstractDomain<M> {
     pub value: M,
+
 }
+
 impl<M: AbstractDomainOps> AbstractDomain<M> {
     // Costruttore
     pub fn new(value: M) -> Self {

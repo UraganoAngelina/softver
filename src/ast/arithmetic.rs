@@ -71,8 +71,8 @@ impl ArithmeticExpression for Variable {
         self.value.clone()
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
-        println!("STATE SITUATION {}", abs_state);
-        println!("SEARCH FOR {}", self.value);
+        // println!("STATE SITUATION {}", abs_state);
+        // println!("SEARCH FOR {}", self.value);
         let res=*abs_state
             .variables
             .get(&self.value)
@@ -283,7 +283,7 @@ impl ArithmeticExpression for PlusPlus {
                         abs_state
                             .variables
                             .insert(self.var.to_string(), new_value);
-                        println!("state print in plus plus {}", abs_state);
+                        //println!("state print in plus plus {}", abs_state);
                         new_interval
                     } else {
                         let new_int= AbstractInterval::new(m, upper);

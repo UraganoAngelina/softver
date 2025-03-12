@@ -13,6 +13,7 @@ use std::sync::MutexGuard;
 #[macro_use]
 extern crate lazy_static;
 
+
 // 9223372036854775807
 
 lazy_static! {
@@ -22,6 +23,7 @@ pub static M: Mutex<i64> = Mutex::new(0);
 pub static N: Mutex<i64> = Mutex::new(0);
 pub static ANALYSIS_FLAG: Mutex<i64> = Mutex::new(1);
 pub static WIDENING_FLAG: Mutex<bool> = Mutex::new(false);
+pub static NARROWING_FLAG : Mutex<bool> = Mutex::new(false);
 
 pub fn take_int() -> i64 {
     let mut input = String::new();
@@ -69,8 +71,6 @@ fn main() {
                 _n = take_int();
 
                 if _m <= _n {
-                    // println!("Valid input: m = {}, n = {}", _m, _n);
-                    //pushing in the vector -inf e +inf user based
                     let mut vec = CONSTANTS_VECTOR
                         .lock()
                         .expect("failed to lock constant vector");
@@ -99,12 +99,20 @@ fn main() {
                 let mut global_wid_flag = WIDENING_FLAG.lock().unwrap();
                 *global_wid_flag = _wid;
             }
+
+            let mut _narrow = false;
+            println!("Do you wanna use narrowing? type y or n, otherwise will be yes ");
+            _narrow = take_bool();
+
+            {
+                let mut global_narrow_flag = NARROWING_FLAG.lock().unwrap();
+                *global_narrow_flag = _narrow;
+            }
             break;
         } else {
             println!("invalid input, ensure yor're typing '1' or '2' ");
         }
     }
-
     {
         let mut global_analysis_flag = ANALYSIS_FLAG.lock().unwrap();
         *global_analysis_flag = _analysis;
@@ -114,38 +122,31 @@ fn main() {
 }
 
 pub fn find_max(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
-    println!("inf search for value {} ", value);
-    println!("Vec content: {:?}", *vec);
-    
+    // println!("inf search for value {} ", value);
+    // println!("Vec content: {:?}", *vec);
     // Cerca il massimo valore minore o uguale a value
     if let Some(max_val) = vec.iter()
-                              .filter(|&&x| x < value)
+                              .filter(|&&x| x <= value)
                               .cloned()
                               .max() {
-        println!("inf found {}", max_val);
+        //println!("inf found {}", max_val);
         max_val
     } else {
-        // Se non esiste, aggiunge value al vettore e lo restituisce come nuovo minimo
-        vec.push(value);
-        println!("inf not found, added {} as new min", value);
-        value
+        unreachable!("ERROR IN THE INF SEARCH");
     }
 }
 pub fn find_min(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
-    println!("sup search for value {} ", value);
-    println!("Vec content: {:?}", *vec);
+    // println!("sup search for value {} ", value);
+    // println!("Vec content: {:?}", *vec);
     
     // Cerca il massimo valore minore o uguale a value
     if let Some(max_val) = vec.iter()
-                              .filter(|&&x| x > value)
+                              .filter(|&&x| x >= value)
                               .cloned()
                               .min() {
-        println!("sup found {}", max_val);
+        //println!("sup found {}", max_val);
         max_val
     } else {
-        // Se non esiste, aggiunge value al vettore e lo restituisce come nuovo minimo
-        vec.push(value);
-        println!("sup not found, added {} as new min", value);
-        value
+        unreachable!("ERROR IN THE SUP SEARCH");
     }
 }
