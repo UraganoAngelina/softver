@@ -26,6 +26,22 @@ impl AbstractDomainOps for AbstractInterval {
     fn narrowing(&self, other: &Self) -> Self {
         self.int_narrowing(other)
     }
+    
+    fn is_top(&self) -> bool {
+        self._is_top()
+    }
+    
+    fn glb(&self, other: &Self) -> Self {
+        self.intersect(other)
+    }
+    
+    fn is_bottom(&self) -> bool {
+        self.is_bottom()
+    }
+    
+    fn top() -> Self {
+        AbstractInterval::top()
+    }
 }
 
 impl fmt::Display for AbstractInterval {
@@ -39,7 +55,7 @@ impl fmt::Display for AbstractInterval {
 }
 
 impl AbstractInterval {
-    /// Crea un intervallo con estremi definiti
+    /// Create an interval only if is well defined
     pub fn new(lower: i64, upper: i64) -> Self {
         if lower > upper {
             Self::Bottom
@@ -221,6 +237,9 @@ impl AbstractInterval {
             _ => false,
         }
     }
+    pub fn top() -> Self {
+        AbstractInterval::Top
+    }
 }
 
 impl PartialEq for AbstractInterval {
@@ -311,7 +330,17 @@ fn checked_add(a: i64, b: i64) -> i64 {
     let m = *M.lock().unwrap();
     let n = *N.lock().unwrap();
     match a.checked_add(b) {
-        Some(result) => result,
+        Some(result) => {
+            if n>= result {
+                if m<= result
+                {
+                    return result
+                }
+                return m
+            }
+            return n
+            //result
+        }
         None if a > i64::zero() => n,
         None => m,
     }
@@ -378,14 +407,14 @@ fn checked_sub(a: i64, b: i64) -> i64 {
     let n = *N.lock().unwrap();
     match a.checked_sub(b) {
         Some(result) => {
-            if m>= result {
-                if n<= result
+            if n>= result {
+                if m<= result
                 {
                     return result
                 }
-                return n
+                return m
             }
-            return m
+            return n
          },
         None if a > i64::zero() => n,
         None => m,
@@ -453,7 +482,17 @@ fn checked_mul(a: i64, b: i64) -> i64 {
     let m = *M.lock().unwrap();
     let n = *N.lock().unwrap();
     match a.checked_mul(b) {
-        Some(result) => result,
+        Some(result) => {
+            if n>= result {
+                if m<= result
+                {
+                    return result
+                }
+                return m
+            }
+            return n
+            //result
+        }
         None if a > i64::zero() => n,
         None => m,
     } // Usa il metodo built-in per tipi numerici nativi
@@ -533,7 +572,17 @@ fn checked_div(a: i64, b: i64) -> i64 {
     let m = *M.lock().unwrap();
     let n = *N.lock().unwrap();
     match a.checked_div(b) {
-        Some(result) => result,
+        Some(result) => {
+            if n>= result {
+                if m<= result
+                {
+                    return result
+                }
+                return m
+            }
+            return n
+            // result
+        }
         None if a > i64::zero() => n,
         None => m,
     } // Usa il metodo built-in per tipi numerici nativi

@@ -1,3 +1,4 @@
+use crate::abstract_interval::AbstractInterval;
 use crate::{abstract_state, ANALYSIS_FLAG};
 use crate::ast::{arithmetic::*, boolean::*, statement::*, State};
 use crate::lexer::Lexer;
@@ -60,25 +61,25 @@ impl Display for TokenVec {
 
 #[derive(Debug)]
 pub enum Any {
-    BooleanExpression(Box<dyn BooleanExpression>),
-    ArithmeticExpression(Box<dyn ArithmeticExpression>),
-    Statement(Box<dyn Statement>),
+    BooleanExpression(Box<dyn BooleanExpression<Q=AbstractInterval>>),
+    ArithmeticExpression(Box<dyn ArithmeticExpression<Q=AbstractInterval>>),
+    Statement(Box<dyn Statement<Q=AbstractInterval>>),
     Token(Token),
 }
 
 impl Any {
     // Funzione per creare un Any da una BooleanExpression
-    pub fn from_boolean_expr(expr: Box<dyn BooleanExpression>) -> Self {
+    pub fn from_boolean_expr(expr: Box<dyn BooleanExpression<Q=AbstractInterval>>) -> Self {
         Any::BooleanExpression(expr)
     }
 
     // Funzione per creare un Any da una ArithmeticExpression
-    pub fn from_arithmetic_expr(expr: Box<dyn ArithmeticExpression>) -> Self {
+    pub fn from_arithmetic_expr(expr: Box<dyn ArithmeticExpression<Q=AbstractInterval>>) -> Self {
         Any::ArithmeticExpression(expr)
     }
 
     // Funzione per creare un Any da uno Statement
-    pub fn from_statement(stmt: Box<dyn Statement>) -> Self {
+    pub fn from_statement(stmt: Box<dyn Statement<Q=AbstractInterval>>) -> Self {
         Any::Statement(stmt)
     }
 
@@ -88,7 +89,7 @@ impl Any {
     }
 
     // Funzione per ottenere un riferimento a ArithmeticExpression (se presente)
-    pub fn as_arithmetic_expr(&self) -> Option<&Box<dyn ArithmeticExpression>> {
+    pub fn as_arithmetic_expr(&self) -> Option<&Box<dyn ArithmeticExpression<Q=AbstractInterval>>> {
         if let Any::ArithmeticExpression(expr) = self {
             Some(expr)
         } else {
@@ -97,7 +98,7 @@ impl Any {
     }
 
     // Funzione per ottenere un riferimento a Statement (se presente)
-    pub fn as_statement(&self) -> Option<&Box<dyn Statement>> {
+    pub fn as_statement(&self) -> Option<&Box<dyn Statement<Q=AbstractInterval>>> {
         if let Any::Statement(stmt) = self {
             Some(stmt)
         } else {
@@ -291,7 +292,7 @@ pub fn parse_atomic(tok_vec: &mut AnyVec, index: &mut usize) {
 pub fn parse_arithmetic_subexpression(
     tok_vec: &mut AnyVec,
     index: &mut usize,
-) -> Box<dyn ArithmeticExpression> {
+) -> Box<dyn ArithmeticExpression<Q=AbstractInterval>> {
     // Incrementa l'indice per saltare la parentesi aperta
     *index += 1;
 
@@ -344,7 +345,7 @@ pub fn parse_arithmetic_subexpression(
 pub fn parse_bool_subexpression(
     tok_vec: &mut AnyVec,
     index: &mut usize,
-) -> Box<dyn BooleanExpression> {
+) -> Box<dyn BooleanExpression<Q=AbstractInterval>> {
     // Incrementa l'indice per saltare la parentesi aperta
     *index += 1;
 
@@ -1495,9 +1496,9 @@ pub fn parse_for_block(
     any_vec: &mut AnyVec,
     index: &mut usize,
 ) -> Option<(
-    Box<dyn Statement>,
-    Box<dyn BooleanExpression>,
-    Box<dyn ArithmeticExpression>,
+    Box<dyn Statement<Q=AbstractInterval>>,
+    Box<dyn BooleanExpression<Q=AbstractInterval>>,
+    Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 )> {
     let mut itindex = index.clone();
     let mut start = 0;
@@ -1588,7 +1589,7 @@ pub fn parse_for_block(
 pub fn parse_substatement_block(
     any_vec: &mut AnyVec,
     index: &mut usize,
-) -> Option<Box<dyn Statement>> {
+) -> Option<Box<dyn Statement<Q=AbstractInterval>>> {
     let start = *index;
     let mut depth = 0;
 

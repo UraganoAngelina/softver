@@ -1,21 +1,24 @@
 use std::collections::HashMap;
-use crate::abstract_interval::AbstractInterval;
-use crate::abstract_domain::AbstractDomain;
-use std::fmt;
+// use crate::abstract_interval::AbstractInterval;
+use crate::abstract_domain::{AbstractDomain, AbstractDomainOps};
+use std::fmt::{self, Debug};
 
 #[derive(Debug, PartialEq)]
-pub struct AbstractState {
+pub struct AbstractState<Q: AbstractDomainOps + Clone> {
     pub is_bottom: bool, // Bottom flag ⊥
-    pub variables: HashMap<String, AbstractDomain<AbstractInterval>>,
+    pub variables: HashMap<String, AbstractDomain<Q>>,
 }
 
-impl PartialEq for AbstractDomain<AbstractInterval> {
+impl<Q> PartialEq for AbstractDomain<Q>
+where Q : std::cmp::PartialEq {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
     }
 }
 
-impl AbstractState {
+impl<Q> AbstractState<Q> 
+where
+    Q: AbstractDomainOps + Clone,{
     // Builds an empty state (not ⊥)
     pub fn new() -> Self {
         Self {
@@ -25,10 +28,10 @@ impl AbstractState {
     }
     fn _is_top(&self) -> bool {
         // Se ci sono variabili, verificare se una di esse è Top
-        self.variables.values().any(|interval| interval.value._is_top())
+        self.variables.values().any(|interval| interval.value.is_top())
     }
     // Builds bottom state ⊥
-    pub fn bottom(&self) -> AbstractState {
+    pub fn bottom(&self) -> AbstractState<Q> {
         AbstractState {
             is_bottom: true,
             variables: self.variables.clone(),
@@ -42,8 +45,8 @@ impl AbstractState {
     pub fn update_interval(
         &mut self,
         variable_name: &str,
-        new_interval: AbstractInterval,
-    ) -> AbstractState {
+        new_interval: Q,
+    ) -> AbstractState<Q> {
         // Se lo stato è già bottom, restituire direttamente uno stato bottom
         if self.is_bottom() {
             return self.bottom();
@@ -54,12 +57,12 @@ impl AbstractState {
             .variables
             .get(variable_name)
             .cloned()
-            .unwrap_or_else(|| AbstractDomain::new(AbstractInterval::Top));  // Top per default
+            .unwrap_or_else(|| AbstractDomain::new(Q::top()));  // Top per default
 
         // Interseca l'intervallo corrente con quello nuovo
         let updated_interval = current_domain
             .get_value()
-            .intersect(&new_interval);
+            .glb(&new_interval);
 
         // Se il risultato è Bottom, impostare lo stato a bottom
         if updated_interval.is_bottom() {
@@ -76,7 +79,7 @@ impl AbstractState {
         self.clone()
     }
     // Least Upper Bound for states
-    pub fn state_lub(&self, other: &AbstractState) -> AbstractState{
+    pub fn state_lub(&self, other: &AbstractState<Q>) -> AbstractState<Q>{
         if self.is_bottom {
             return other.clone();
         }
@@ -84,7 +87,7 @@ impl AbstractState {
             return self.clone();
         }
 
-        let mut new_variables: HashMap<String , AbstractDomain<AbstractInterval>> = HashMap::new();
+        let mut new_variables: HashMap<String , AbstractDomain<Q>> = HashMap::new();
 
         // Doing the State Lub
         for (key, left_domain) in &self.variables {
@@ -112,7 +115,7 @@ impl AbstractState {
     }
     
     // Widening operator for states
-     pub fn state_widening(&self, other: &AbstractState) -> AbstractState {
+     pub fn state_widening(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
         // Se uno dei due stati è Bottom, ritorna l'altro stato
         if self.is_bottom {
             return other.clone();
@@ -134,7 +137,7 @@ impl AbstractState {
         //     };
         // }
 
-        let mut new_variables: HashMap<String, AbstractDomain<AbstractInterval>> = HashMap::new();
+        let mut new_variables: HashMap<String, AbstractDomain<Q>> = HashMap::new();
 
         for (key, left_interval) in &self.variables {
             if let Some(right_interval) = other.variables.get(key) {
@@ -159,7 +162,7 @@ impl AbstractState {
     }
    
     // Narrowing operator for states
-    pub fn state_narrowing(&self, other: &AbstractState) -> AbstractState {
+    pub fn state_narrowing(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
         if self.is_bottom {
             return other.clone();
         }
@@ -173,7 +176,7 @@ impl AbstractState {
         //         variables: HashMap::new(),
         //     };
         // }
-        let mut new_variables: HashMap<String, AbstractDomain<AbstractInterval>> = HashMap::new();
+        let mut new_variables: HashMap<String, AbstractDomain<Q>> = HashMap::new();
 
         for (key, left_interval) in &self.variables {
             if let Some(right_interval) = other.variables.get(key) {
@@ -198,7 +201,8 @@ impl AbstractState {
     }
 }
 
-impl fmt::Display for AbstractState {
+impl<Q> fmt::Display for AbstractState<Q>
+where Q: AbstractDomainOps + Clone + Debug {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_bottom {
             let variables_str: Vec<String> = self
@@ -218,7 +222,8 @@ impl fmt::Display for AbstractState {
     }
 }
 
-impl Clone for AbstractState {
+impl<Q> Clone for AbstractState<Q> 
+where Q: AbstractDomainOps + Clone{
     fn clone(&self) -> Self {
         Self {
             is_bottom: self.is_bottom,

@@ -1,4 +1,4 @@
-use crate::abstract_domain::{self, AbstractDomain};
+use crate::abstract_domain::{self, AbstractDomain, AbstractDomainOps};
 use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::State;
@@ -8,23 +8,25 @@ use std::any::Any;
 use std::fmt::Debug;
 
 pub trait ArithmeticExpression: Debug {
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression>;
+    type Q: AbstractDomainOps + PartialEq + Clone+ Debug;
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>>;
     fn as_variable(&self) -> Option<&Variable>;
     fn evaluate(&self, state: &mut State) -> i64;
     fn as_any(&self) -> &dyn Any;
 
     fn to_string(&self) -> String;
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval;
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval;
 }
 
 #[derive(Debug)]
 pub struct Numeral(pub i64);
 
 impl ArithmeticExpression for Numeral {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(Numeral(self.0))
     }
     fn as_variable(&self) -> Option<&Variable> {
@@ -36,7 +38,7 @@ impl ArithmeticExpression for Numeral {
     fn to_string(&self) -> String {
         self.0.to_string()
     }
-    fn abs_evaluate(&self, _abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, _abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         let mut constant = CONSTANTS_VECTOR.lock().expect("FAILED TO LOCK THE CONSTANT VECTOR");
         //put the constant in the dedicated vector for threshold widening 
         constant.push(self.0.clone());
@@ -51,10 +53,11 @@ pub struct Variable {
 }
 
 impl ArithmeticExpression for Variable {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(Variable {
             value: self.value.clone(),
         })
@@ -70,7 +73,7 @@ impl ArithmeticExpression for Variable {
     fn to_string(&self) -> String {
         self.value.clone()
     }
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         // println!("STATE SITUATION {}", abs_state);
         // println!("SEARCH FOR {}", self.value);
         let res=*abs_state
@@ -83,15 +86,16 @@ impl ArithmeticExpression for Variable {
 
 #[derive(Debug)]
 pub struct Add {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl ArithmeticExpression for Add {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(Add {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -106,22 +110,23 @@ impl ArithmeticExpression for Add {
     fn to_string(&self) -> String {
         format!("({} + {})", self.left.to_string(), self.right.to_string())
     }
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         self.left.abs_evaluate(abs_state) + self.right.abs_evaluate(abs_state)
     }
 }
 
 #[derive(Debug)]
 pub struct Product {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl ArithmeticExpression for Product {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(Product {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -136,22 +141,23 @@ impl ArithmeticExpression for Product {
     fn to_string(&self) -> String {
         format!("({} * {})", self.left.to_string(), self.right.to_string())
     }
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         self.left.abs_evaluate(abs_state) * self.right.abs_evaluate(abs_state)
     }
 }
 
 #[derive(Debug)]
 pub struct Minus {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl ArithmeticExpression for Minus {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(Minus {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -166,20 +172,21 @@ impl ArithmeticExpression for Minus {
     fn to_string(&self) -> String {
         format!("({} - {})", self.left.to_string(), self.right.to_string())
     }
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         self.left.abs_evaluate(abs_state) - self.right.abs_evaluate(abs_state)
     }
 }
 
 #[derive(Debug)]
 pub struct Uminus {
-    pub right: Box<dyn ArithmeticExpression>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 impl ArithmeticExpression for Uminus {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(Uminus {
             right: self.right.clone_box(),
         })
@@ -193,21 +200,22 @@ impl ArithmeticExpression for Uminus {
     fn to_string(&self) -> String {
         format!("-{}", self.right.to_string())
     }
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         -self.right.abs_evaluate(abs_state)
     }
 }
 
 #[derive(Debug)]
 pub struct Divide {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 impl ArithmeticExpression for Divide {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(Divide {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -228,7 +236,7 @@ impl ArithmeticExpression for Divide {
     fn to_string(&self) -> String {
         format!("({} / {})", self.left.to_string(), self.right.to_string())
     }
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         let zero_int = AbstractInterval::new(0, 0);
         if self.right.abs_evaluate(abs_state) != zero_int {
             self.left.abs_evaluate(abs_state) / self.right.abs_evaluate(abs_state)
@@ -240,13 +248,14 @@ impl ArithmeticExpression for Divide {
 
 #[derive(Debug)]
 pub struct PlusPlus {
-    pub var: Box<dyn ArithmeticExpression>,
+    pub var: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 impl ArithmeticExpression for PlusPlus {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(PlusPlus {
             var: self.var.clone_box(),
         })
@@ -267,7 +276,7 @@ impl ArithmeticExpression for PlusPlus {
     fn to_string(&self) -> String {
         format!("{}++", self.var.to_string())
     }
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         let m = *M.lock().unwrap();
         let n = *N.lock().unwrap();
         let value = self.var.abs_evaluate(abs_state);
@@ -306,13 +315,14 @@ impl ArithmeticExpression for PlusPlus {
 
 #[derive(Debug)]
 pub struct MinusMinus {
-    pub var: Box<dyn ArithmeticExpression>,
+    pub var: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 impl ArithmeticExpression for MinusMinus {
+    type Q = AbstractInterval;
     fn as_any(&self) -> &dyn Any {
         self
     }
-    fn clone_box(&self) -> Box<dyn ArithmeticExpression> {
+    fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>> {
         Box::new(MinusMinus {
             var: self.var.clone_box(),
         })
@@ -330,7 +340,7 @@ impl ArithmeticExpression for MinusMinus {
     fn to_string(&self) -> String {
         format!("{}--", self.var.to_string())
     }
-    fn abs_evaluate(&self, abs_state: &mut AbstractState) -> AbstractInterval {
+    fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         let m = *M.lock().unwrap();
         let n = *N.lock().unwrap();
         let value = self.var.abs_evaluate(abs_state);

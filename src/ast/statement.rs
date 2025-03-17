@@ -1,24 +1,26 @@
-use crate::abstract_domain::AbstractDomain;
+use crate::abstract_domain::{AbstractDomain, AbstractDomainOps};
 use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::{arithmetic::*, boolean::*, State};
 use crate::{ NARROWING_FLAG, WIDENING_FLAG};
 use std::fmt::Debug;
 pub trait Statement: Debug {
-    fn clone_box(&self) -> Box<dyn Statement>;
+    type Q: AbstractDomainOps + PartialEq + Clone+ Debug;
+    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>>;
     fn evaluate(&self, state: &mut State) -> State;
-    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState;
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q>;
     fn to_string(&self) -> String;
 }
 
 #[derive(Debug)]
 pub struct Assign {
-    pub var_name: Box<dyn ArithmeticExpression>,
-    pub expr: Box<dyn ArithmeticExpression>,
+    pub var_name: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub expr: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl Statement for Assign {
-    fn clone_box(&self) -> Box<dyn Statement> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
         Box::new(Assign {
             var_name: self.var_name.clone_box(),
             expr: self.expr.clone_box(),
@@ -30,7 +32,7 @@ impl Statement for Assign {
         state.insert(self.var_name.clone_box().to_string(), value);
         state.clone()
     }
-    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
             let mut new_state = state.clone();
             let value = self.expr.abs_evaluate(&mut new_state);
             state.variables.insert(
@@ -49,14 +51,15 @@ impl Statement for Assign {
 pub struct Skip;
 
 impl Statement for Skip {
-    fn clone_box(&self) -> Box<dyn Statement> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
         Box::new(Skip {})
     }
 
     fn evaluate(&self, state: &mut State) -> State {
         state.clone()
     }
-    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
         state.clone()
     }
     fn to_string(&self) -> String {
@@ -66,12 +69,13 @@ impl Statement for Skip {
 
 #[derive(Debug)]
 pub struct Concat {
-    pub first: Box<dyn Statement>,
-    pub second: Box<dyn Statement>,
+    pub first: Box<dyn Statement<Q=AbstractInterval>>,
+    pub second: Box<dyn Statement<Q=AbstractInterval>>,
 }
 
 impl Statement for Concat {
-    fn clone_box(&self) -> Box<dyn Statement> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
         Box::new(Concat {
             first: self.first.clone_box(),
             second: self.second.clone_box(),
@@ -83,7 +87,7 @@ impl Statement for Concat {
         let state_after_second = self.second.evaluate(&mut state_after_first);
         state_after_second
     }
-    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
             let new_state = self
             .second
             .abs_evaluate(&mut self.first.abs_evaluate(state));
@@ -99,13 +103,14 @@ impl Statement for Concat {
 
 #[derive(Debug)]
 pub struct IfThenElse {
-    pub guard: Box<dyn BooleanExpression>,
-    pub true_expr: Box<dyn Statement>,
-    pub false_expr: Box<dyn Statement>,
+    pub guard: Box<dyn BooleanExpression<Q=AbstractInterval>>,
+    pub true_expr: Box<dyn Statement<Q=AbstractInterval>>,
+    pub false_expr: Box<dyn Statement<Q=AbstractInterval>>,
 }
 
 impl Statement for IfThenElse {
-    fn clone_box(&self) -> Box<dyn Statement> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
         Box::new(IfThenElse {
             guard: self.guard.clone_box(),
             true_expr: self.true_expr.clone_box(),
@@ -125,7 +130,7 @@ impl Statement for IfThenElse {
         }
     }
 
-    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
         let then_state = self
             .guard
             .abs_evaluate(&mut self.true_expr.abs_evaluate(state), false);
@@ -149,12 +154,13 @@ impl Statement for IfThenElse {
 
 #[derive(Debug)]
 pub struct While {
-    pub guard: Box<dyn BooleanExpression>,
-    pub body: Box<dyn Statement>,
+    pub guard: Box<dyn BooleanExpression<Q=AbstractInterval>>,
+    pub body: Box<dyn Statement<Q=AbstractInterval>>,
 }
 
 impl Statement for While {
-    fn clone_box(&self) -> Box<dyn Statement> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
         Box::new(While {
             guard: self.guard.clone_box(),
             body: self.body.clone_box(),
@@ -181,7 +187,7 @@ impl Statement for While {
         current_state
     }
 
-    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
         let wid = WIDENING_FLAG
             .lock()
             .expect("failed to read widening flag in while loop");
@@ -239,14 +245,15 @@ impl Statement for While {
 
 #[derive(Debug)]
 pub struct For {
-    pub init: Box<dyn Statement>,
-    pub guard: Box<dyn BooleanExpression>,
-    pub increment: Box<dyn ArithmeticExpression>,
-    pub body: Box<dyn Statement>,
+    pub init: Box<dyn Statement<Q=AbstractInterval>>,
+    pub guard: Box<dyn BooleanExpression<Q=AbstractInterval>>,
+    pub increment: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub body: Box<dyn Statement<Q=AbstractInterval>>,
 }
 
 impl Statement for For {
-    fn clone_box(&self) -> Box<dyn Statement> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
         Box::new(For {
             init: self.init.clone_box(),
             guard: self.guard.clone_box(),
@@ -277,7 +284,7 @@ impl Statement for For {
         current_state
     }
 
-    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
         let wid = WIDENING_FLAG
             .lock()
             .expect("failed to read widening flag in for loop");
@@ -312,19 +319,19 @@ impl Statement for For {
         }
         println!("CYCLE INVARIANT {}", current_state);
         _prev_state = precondition.clone();
-        if *narrow == true {
+        
             loop {
                 _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
                 _body_result = _prev_state.state_lub(&_body_result.clone());
                 _increment_result = self.increment.abs_evaluate(&mut _body_result);
-                current_state = current_state.state_narrowing(&_body_result.clone());
+                if *narrow == true {current_state = current_state.state_narrowing(&_body_result.clone());}
                 if current_state == _prev_state {
                     break;
                 }
                 _prev_state = current_state.clone();
             }
-        }
+        
         // filtering with !guard
         let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
         println!("CYCLE POSTCONDITION: {}", postcondition);
@@ -344,12 +351,13 @@ impl Statement for For {
 
 #[derive(Debug)]
 pub struct RepeatUntil {
-    pub body: Box<dyn Statement>,
-    pub guard: Box<dyn BooleanExpression>,
+    pub body: Box<dyn Statement<Q=AbstractInterval>>,
+    pub guard: Box<dyn BooleanExpression<Q=AbstractInterval>>,
 }
 
 impl Statement for RepeatUntil {
-    fn clone_box(&self) -> Box<dyn Statement> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
         Box::new(RepeatUntil {
             body: self.body.clone_box(),
             guard: self.guard.clone_box(),
@@ -376,7 +384,7 @@ impl Statement for RepeatUntil {
         current_state
     }
 
-    fn abs_evaluate(&self, state: &mut AbstractState) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
         let wid = WIDENING_FLAG
             .lock()
             .expect("failed to read widening flag in repeat until loop");

@@ -99,11 +99,11 @@ fn main() {
                 let mut global_wid_flag = WIDENING_FLAG.lock().unwrap();
                 *global_wid_flag = _wid;
             }
-
             let mut _narrow = false;
-            println!("Do you wanna use narrowing? type y or n, otherwise will be yes ");
-            _narrow = take_bool();
-
+            if _wid {
+                println!("Do you wanna use narrowing? type y or n, otherwise will be yes ");
+                _narrow = take_bool();
+            }
             {
                 let mut global_narrow_flag = NARROWING_FLAG.lock().unwrap();
                 *global_narrow_flag = _narrow;
@@ -122,9 +122,6 @@ fn main() {
 }
 
 pub fn find_max(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
-    // println!("inf search for value {} ", value);
-    // println!("Vec content: {:?}", *vec);
-    // Cerca il massimo valore minore o uguale a value
     if let Some(max_val) = vec.iter()
                               .filter(|&&x| x <= value)
                               .cloned()

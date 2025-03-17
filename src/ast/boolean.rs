@@ -1,4 +1,4 @@
-use crate::abstract_domain::AbstractDomain;
+use crate::abstract_domain::{AbstractDomain, AbstractDomainOps};
 use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::arithmetic::ArithmeticExpression;
@@ -8,10 +8,11 @@ use std::fmt::Debug;
 
 use super::arithmetic::{Add, Numeral};
 
-pub trait BooleanExpression: Debug {
-    fn clone_box(&self) -> Box<dyn BooleanExpression>;
+pub trait BooleanExpression:  Debug{
+type Q: AbstractDomainOps + PartialEq + Clone+ Debug;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q = Self::Q>>;
     fn evaluate(&self, state: &mut State) -> bool;
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState;
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q>;
     fn to_string(&self) -> String;
 }
 
@@ -19,25 +20,20 @@ pub trait BooleanExpression: Debug {
 pub struct Boolean(pub bool);
 
 impl BooleanExpression for Boolean {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q = Self::Q>> {
         Box::new(Boolean(self.0)) // Crea un nuovo Box con una copia di Numeral
     }
     fn evaluate(&self, _state: &mut State) -> bool {
         self.0
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q>
+    where
+    Self::Q: AbstractDomainOps + Clone + PartialEq, {
         if !flag {
-            if self.0 {
-                state.clone()
-            } else {
-                AbstractState::bottom(state)
-            }
+            state.clone()
         } else {
-            if self.0 {
-                AbstractState::bottom(state)
-            } else {
-                state.clone()
-            }
+            state.clone()
         }
     }
     fn to_string(&self) -> String {
@@ -47,12 +43,13 @@ impl BooleanExpression for Boolean {
 
 #[derive(Debug)]
 pub struct Equal {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl BooleanExpression for Equal {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(Equal {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -61,7 +58,7 @@ impl BooleanExpression for Equal {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) == self.right.evaluate(state)
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q> {
         // devo trasformare x = y in (x <= y) && (y <= x)
         let left_op = LessEqual {
             left: self.left.clone_box(),
@@ -83,12 +80,13 @@ impl BooleanExpression for Equal {
 }
 #[derive(Debug)]
 pub struct NotEqual {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl BooleanExpression for NotEqual {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(NotEqual {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -99,7 +97,7 @@ impl BooleanExpression for NotEqual {
         self.left.evaluate(state) != self.right.evaluate(state)
     }
 
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q> {
         // devo trasformare x != y in (x < y) || (y < x)
         let left_op = Less {
             left: self.left.clone_box(),
@@ -122,12 +120,13 @@ impl BooleanExpression for NotEqual {
 
 #[derive(Debug)]
 pub struct GreatEqual {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl BooleanExpression for GreatEqual {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(GreatEqual {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -136,13 +135,13 @@ impl BooleanExpression for GreatEqual {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) >= self.right.evaluate(state)
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q> {
         // devo trasformare x >= y in y <= x
         let leq = LessEqual {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
         };
-    leq.abs_evaluate(state, flag)
+        leq.abs_evaluate(state, flag)
     }
     fn to_string(&self) -> String {
         format!("{} >= {}", self.left.to_string(), self.right.to_string())
@@ -150,11 +149,12 @@ impl BooleanExpression for GreatEqual {
 }
 #[derive(Debug)]
 pub struct Great {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 impl BooleanExpression for Great {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(Great {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -163,7 +163,7 @@ impl BooleanExpression for Great {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) > self.right.evaluate(state)
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q> {
         // transforming x > y into y+1 <= x
         // TODO occhio al caso var > num in tal caso ritorna state.clone()
         let left_op = Box::new(Add {
@@ -183,12 +183,13 @@ impl BooleanExpression for Great {
 
 #[derive(Debug)]
 pub struct LessEqual {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl BooleanExpression for LessEqual {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(LessEqual {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -197,7 +198,7 @@ impl BooleanExpression for LessEqual {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) <= self.right.evaluate(state)
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q> {
         if !flag {
             if state.is_bottom() {
                 return AbstractState::bottom(state);
@@ -277,8 +278,11 @@ impl BooleanExpression for LessEqual {
             }
         } else {
             //devo trasformare x >= y in y<=x
-            let leq = LessEqual{left:self.right.clone_box() , right: self.left.clone_box()};
-            let my_flag= !flag;
+            let leq = LessEqual {
+                left: self.right.clone_box(),
+                right: self.left.clone_box(),
+            };
+            let my_flag = !flag;
             leq.abs_evaluate(state, my_flag)
         }
     }
@@ -289,12 +293,13 @@ impl BooleanExpression for LessEqual {
 
 #[derive(Debug)]
 pub struct Less {
-    pub left: Box<dyn ArithmeticExpression>,
-    pub right: Box<dyn ArithmeticExpression>,
+    pub left: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
 }
 
 impl BooleanExpression for Less {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(Less {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -303,7 +308,7 @@ impl BooleanExpression for Less {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) < self.right.evaluate(state)
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q> {
         // println!("Interpreting {:?}", self);
         // println!("In the abstract state {}", state);
         // transforming x < y into x+1 <= y
@@ -324,12 +329,13 @@ impl BooleanExpression for Less {
 
 #[derive(Debug)]
 pub struct And {
-    pub left: Box<dyn BooleanExpression>,
-    pub right: Box<dyn BooleanExpression>,
+    pub left: Box<dyn BooleanExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn BooleanExpression<Q=AbstractInterval>>,
 }
 
 impl BooleanExpression for And {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(And {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -338,7 +344,7 @@ impl BooleanExpression for And {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) && self.right.evaluate(state)
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q> {
         if !flag {
             let left_eval = self.left.abs_evaluate(state, false);
             let right_eval = self.right.abs_evaluate(state, false);
@@ -408,12 +414,13 @@ impl BooleanExpression for And {
 
 #[derive(Debug)]
 pub struct Or {
-    pub left: Box<dyn BooleanExpression>,
-    pub right: Box<dyn BooleanExpression>,
+    pub left: Box<dyn BooleanExpression<Q=AbstractInterval>>,
+    pub right: Box<dyn BooleanExpression<Q=AbstractInterval>>,
 }
 
 impl BooleanExpression for Or {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(Or {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
@@ -422,7 +429,7 @@ impl BooleanExpression for Or {
     fn evaluate(&self, state: &mut State) -> bool {
         self.left.evaluate(state) || self.right.evaluate(state)
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, flag: bool) -> AbstractState<Self::Q> {
         if !flag {
             let left_eval = self.left.abs_evaluate(state, false);
             let right_eval = self.right.abs_evaluate(state, false);
@@ -492,11 +499,12 @@ impl BooleanExpression for Or {
 
 #[derive(Debug)]
 pub struct Not {
-    pub expression: Box<dyn BooleanExpression>,
+    pub expression: Box<dyn BooleanExpression<Q=AbstractInterval>>,
 }
 
 impl BooleanExpression for Not {
-    fn clone_box(&self) -> Box<dyn BooleanExpression> {
+    type Q = AbstractInterval;
+    fn clone_box(&self) -> Box<dyn BooleanExpression<Q=Self::Q>> {
         Box::new(Not {
             expression: self.expression.clone_box(),
         })
@@ -504,30 +512,9 @@ impl BooleanExpression for Not {
     fn evaluate(&self, state: &mut State) -> bool {
         !(self.expression.evaluate(state))
     }
-    fn abs_evaluate(&self, state: &mut AbstractState, _flag: bool) -> AbstractState {
+    fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>, _flag: bool) -> AbstractState<Self::Q> {
         let expr_eval = self.expression.abs_evaluate(state, false);
-
-        if expr_eval.is_bottom() {
-            return AbstractState::bottom(state);
-        }
-
-        let mut new_variables = HashMap::new();
-        for key in expr_eval.variables.keys() {
-            let expr_interval = expr_eval.variables.get(key);
-
-            let neg_interval = match expr_interval {
-                Some(i) => -(i.value),
-                None => AbstractInterval::Top,
-            };
-
-            new_variables.insert(key.clone(), AbstractDomain::new(neg_interval));
-        }
-
-        let negated_state = AbstractState {
-            is_bottom: false,
-            variables: new_variables,
-        };
-        state.state_lub(&negated_state)
+        expr_eval
     }
 
     fn to_string(&self) -> String {
