@@ -26,19 +26,19 @@ impl AbstractDomainOps for AbstractInterval {
     fn narrowing(&self, other: &Self) -> Self {
         self.int_narrowing(other)
     }
-    
+
     fn is_top(&self) -> bool {
         self._is_top()
     }
-    
+
     fn glb(&self, other: &Self) -> Self {
         self.intersect(other)
     }
-    
+
     fn is_bottom(&self) -> bool {
         self.is_bottom()
     }
-    
+
     fn top() -> Self {
         AbstractInterval::top()
     }
@@ -226,14 +226,23 @@ impl AbstractInterval {
         }
     }
     pub fn _is_top(&self) -> bool {
+        let m = *M.lock().unwrap();
+        let n = *N.lock().unwrap();
         match self {
             Self::Top => true,
+            Self::Bounded { lower, upper } => {
+                if *lower == m && *upper == n {
+                    true
+                } else {
+                    false
+                }
+            }
             _ => false,
         }
     }
     pub fn is_bottom(&self) -> bool {
         match self {
-            Self::Top => true,
+            Self::Bottom => true,
             _ => false,
         }
     }
@@ -316,9 +325,18 @@ impl Add for AbstractInterval {
                         upper: new_upper,
                     }
                 } else {
-                    Self::Bounded {
-                        lower: checked_add(l1, l2),
-                        upper: checked_add(u1, u2),
+                    let new_upper = checked_add(l1, l2);
+                    let new_lower = checked_add(u1, u2);
+                    if new_upper == m && new_lower == m {
+                        return Self::Top;
+                    }
+                    if new_upper == m || new_lower == n {
+                        Self::Bottom
+                    } else {
+                        Self::Bounded {
+                            lower: new_lower,
+                            upper: new_upper,
+                        }
                     }
                 }
             }
@@ -331,14 +349,13 @@ fn checked_add(a: i64, b: i64) -> i64 {
     let n = *N.lock().unwrap();
     match a.checked_add(b) {
         Some(result) => {
-            if n>= result {
-                if m<= result
-                {
-                    return result
+            if n >= result {
+                if m <= result {
+                    return result;
                 }
-                return m
+                return m;
             }
-            return n
+            return n;
             //result
         }
         None if a > i64::zero() => n,
@@ -350,6 +367,7 @@ impl Sub for AbstractInterval {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
+        println!("sub function call");
         match (self, other) {
             (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom,
             (Self::Top, _) | (_, Self::Top) => Self::Top,
@@ -373,28 +391,44 @@ impl Sub for AbstractInterval {
                         upper: new_upper,
                     }
                 } else {
-                    let candidates = [
-                        checked_sub(l1, l2),
-                        checked_sub(l1, u2),
-                        checked_sub(u1, l2),
-                        checked_sub(u1, u2),
-                    ];
+                    println!("normal form of analysis");
+                    // [a,b] [c,d] = [a-d, b-c]
+                    let new_lower = checked_sub(l1, u2);
+                    let new_upper = checked_sub(u1, l2);
+                    // let candidates = [
+                    //     checked_sub(l1, l2),
+                    //     checked_sub(l1, u2),
+                    //     checked_sub(u1, l2),
+                    //     checked_sub(u1, u2),
+                    // ];
 
-                    let new_lower = candidates
-                        .iter()
-                        .filter_map(|&x| Some(x)) // Filtra i risultati validi
-                        .min() // Trova il valore minimo
-                        .unwrap_or(min_value()); // Se tutto fallisce, ritorna il valore minimo
+                    // let new_lower = candidates
+                    //     .iter()
+                    //     .filter_map(|&x| Some(x)) // Filtra i risultati validi
+                    //     .min() // Trova il valore minimo
+                    //     .unwrap_or(min_value()); // Se tutto fallisce, ritorna il valore minimo
 
-                    let new_upper = candidates
-                        .iter()
-                        .filter_map(|&x| Some(x)) // Filtra i risultati validi
-                        .max() // Trova il valore massimo
-                        .unwrap_or(max_value()); // Se tutto fallisce, ritorna il valore massimo
+                    // let new_upper = candidates
+                    //     .iter()
+                    //     .filter_map(|&x| Some(x)) // Filtra i risultati validi
+                    //     .max() // Trova il valore massimo
+                    //     .unwrap_or(max_value()); // Se tutto fallisce, ritorna il valore massimo
+                    println!("new upper in sub {}", new_upper);
+                    println!("new lower in sub {}", new_lower);
 
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
+                    if new_upper == n && new_lower == m {
+                        println!("returning top in sub");
+                        return Self::Top;
+                    }
+                    if new_upper == n || new_lower == m {
+                        println!("returning bottom in sub");
+                        Self::Bottom
+                    } else {
+                        println!("returning bounded in sub");
+                        Self::Bounded {
+                            lower: new_lower,
+                            upper: new_upper,
+                        }
                     }
                 }
             }
@@ -403,21 +437,31 @@ impl Sub for AbstractInterval {
 }
 
 fn checked_sub(a: i64, b: i64) -> i64 {
+    println!("check sub function call");
     let m = *M.lock().unwrap();
     let n = *N.lock().unwrap();
     match a.checked_sub(b) {
         Some(result) => {
-            if n>= result {
-                if m<= result
-                {
-                    return result
+            println!("Some case in check sub");
+            if n >= result {
+                if m <= result {
+                    println!("normal case {}", result);
+                    return result;
                 }
-                return m
+                println!("returning min");
+                return m;
             }
-            return n
-         },
-        None if a > i64::zero() => n,
-        None => m,
+            println!("returning max");
+            return n;
+        }
+        None if a > i64::zero() => {
+            println!("none case returnin max");
+            n
+        }
+        None => {
+            println!("none case returning min");
+            m
+        }
     }
 }
 
@@ -483,14 +527,13 @@ fn checked_mul(a: i64, b: i64) -> i64 {
     let n = *N.lock().unwrap();
     match a.checked_mul(b) {
         Some(result) => {
-            if n>= result {
-                if m<= result
-                {
-                    return result
+            if n >= result {
+                if m <= result {
+                    return result;
                 }
-                return m
+                return m;
             }
-            return n
+            return n;
             //result
         }
         None if a > i64::zero() => n,
@@ -573,14 +616,13 @@ fn checked_div(a: i64, b: i64) -> i64 {
     let n = *N.lock().unwrap();
     match a.checked_div(b) {
         Some(result) => {
-            if n>= result {
-                if m<= result
-                {
-                    return result
+            if n >= result {
+                if m <= result {
+                    return result;
                 }
-                return m
+                return m;
             }
-            return n
+            return n;
             // result
         }
         None if a > i64::zero() => n,

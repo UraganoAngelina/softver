@@ -32,6 +32,11 @@ impl<Q: AbstractDomainOps> AbstractDomain<Q> {
             value: self.value.lub(&other.value),
         }
     }
+    pub fn glb(&self, other: &Self) -> Self {
+        AbstractDomain {
+            value: self.value.glb(&other.value),
+        }
+    }
 
     // Widening
     pub fn widening(&self, other: &Self) -> Self {
@@ -45,6 +50,12 @@ impl<Q: AbstractDomainOps> AbstractDomain<Q> {
         AbstractDomain {
             value: self.value.narrowing(&other.value),
         }
+    }
+    pub fn is_bottom(& self) -> bool {
+        self.get_value().is_bottom()
+    }
+    pub fn is_top(&self) -> bool {
+        self.get_value().is_top()
     }
 }
 

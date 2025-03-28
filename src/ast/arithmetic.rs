@@ -7,6 +7,9 @@ use crate::CONSTANTS_VECTOR;
 use std::any::Any;
 use std::fmt::Debug;
 
+
+
+
 pub trait ArithmeticExpression: Debug {
     type Q: AbstractDomainOps + PartialEq + Clone+ Debug;
     fn clone_box(&self) -> Box<dyn ArithmeticExpression<Q=Self::Q>>;
@@ -16,6 +19,7 @@ pub trait ArithmeticExpression: Debug {
 
     fn to_string(&self) -> String;
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval;
+    fn extract_variables(&self) -> Vec<&Variable>;
 }
 
 #[derive(Debug)]
@@ -44,6 +48,9 @@ impl ArithmeticExpression for Numeral {
         constant.push(self.0.clone());
         //return a constant interval
         AbstractInterval::new(self.0, self.0)
+    }
+    fn extract_variables(&self) -> Vec<&Variable> {
+       Vec::new()
     }
 }
 
@@ -74,14 +81,23 @@ impl ArithmeticExpression for Variable {
         self.value.clone()
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
-        // println!("STATE SITUATION {}", abs_state);
-        // println!("SEARCH FOR {}", self.value);
+        println!("STATE SITUATION {}", abs_state);
+        println!("SEARCH FOR {}", self.value);
         let res=*abs_state
             .variables
             .get(&self.value)
             .expect("Variable not found in the abstract state!");
         return res.value
     }
+    fn extract_variables(&self) -> Vec<&Variable> {
+        let mut vars = Vec::new();
+        // Se il lato sinistro è una variabile o contiene variabili
+        if let Some(v) = self.as_variable() {
+            vars.push(v);
+        } 
+        vars
+    }
+    
 }
 
 #[derive(Debug)]
@@ -112,6 +128,23 @@ impl ArithmeticExpression for Add {
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         self.left.abs_evaluate(abs_state) + self.right.abs_evaluate(abs_state)
+    }
+    fn extract_variables(&self) -> Vec<&Variable> {
+        let mut vars = Vec::new();
+        // Se il lato sinistro è una variabile o contiene variabili
+        if let Some(v) = self.left.as_variable() {
+            vars.push(v);
+        } else {
+            // Se non è una variabile diretta, prova a estrarle ricorsivamente
+            vars.extend(self.left.extract_variables());
+        }
+        // Stessa logica per il lato destro
+        if let Some(v) = self.right.as_variable() {
+            vars.push(v);
+        } else {
+            vars.extend(self.right.extract_variables());
+        }
+        vars
     }
 }
 
@@ -144,6 +177,23 @@ impl ArithmeticExpression for Product {
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         self.left.abs_evaluate(abs_state) * self.right.abs_evaluate(abs_state)
     }
+    fn extract_variables(&self) -> Vec<&Variable> {
+        let mut vars = Vec::new();
+        // Se il lato sinistro è una variabile o contiene variabili
+        if let Some(v) = self.left.as_variable() {
+            vars.push(v);
+        } else {
+            // Se non è una variabile diretta, prova a estrarle ricorsivamente
+            vars.extend(self.left.extract_variables());
+        }
+        // Stessa logica per il lato destro
+        if let Some(v) = self.right.as_variable() {
+            vars.push(v);
+        } else {
+            vars.extend(self.right.extract_variables());
+        }
+        vars
+    }
 }
 
 #[derive(Debug)]
@@ -175,6 +225,23 @@ impl ArithmeticExpression for Minus {
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         self.left.abs_evaluate(abs_state) - self.right.abs_evaluate(abs_state)
     }
+    fn extract_variables(&self) -> Vec<&Variable> {
+        let mut vars = Vec::new();
+        // Se il lato sinistro è una variabile o contiene variabili
+        if let Some(v) = self.left.as_variable() {
+            vars.push(v);
+        } else {
+            // Se non è una variabile diretta, prova a estrarle ricorsivamente
+            vars.extend(self.left.extract_variables());
+        }
+        // Stessa logica per il lato destro
+        if let Some(v) = self.right.as_variable() {
+            vars.push(v);
+        } else {
+            vars.extend(self.right.extract_variables());
+        }
+        vars
+    }
 }
 
 #[derive(Debug)]
@@ -202,6 +269,17 @@ impl ArithmeticExpression for Uminus {
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         -self.right.abs_evaluate(abs_state)
+    }
+    fn extract_variables(&self) -> Vec<&Variable> {
+        let mut vars = Vec::new();
+        // Se il lato sinistro è una variabile o contiene variabili
+        if let Some(v) = self.right.as_variable() {
+            vars.push(v);
+        } else {
+            // Se non è una variabile diretta, prova a estrarle ricorsivamente
+            vars.extend(self.right.extract_variables());
+        }
+        vars
     }
 }
 
@@ -244,6 +322,23 @@ impl ArithmeticExpression for Divide {
             unreachable!("**RUNTIME ERROR, division by zero found while interpreting**")
         }
     }
+    fn extract_variables(&self) -> Vec<&Variable> {
+        let mut vars = Vec::new();
+        // Se il lato sinistro è una variabile o contiene variabili
+        if let Some(v) = self.left.as_variable() {
+            vars.push(v);
+        } else {
+            // Se non è una variabile diretta, prova a estrarle ricorsivamente
+            vars.extend(self.left.extract_variables());
+        }
+        // Stessa logica per il lato destro
+        if let Some(v) = self.right.as_variable() {
+            vars.push(v);
+        } else {
+            vars.extend(self.right.extract_variables());
+        }
+        vars
+    }
 }
 
 #[derive(Debug)]
@@ -284,8 +379,8 @@ impl ArithmeticExpression for PlusPlus {
             AbstractInterval::Bottom => AbstractInterval::Bottom,
             AbstractInterval::Top => AbstractInterval::Top,
             AbstractInterval::Bounded { lower, upper } => {
-                if upper < n {
-                    if lower > m {
+                if upper <= n {
+                    if lower >= m {
                         let newupper = upper + 1;
                         let new_interval = AbstractInterval::new(lower, newupper);
                         let new_value = AbstractDomain::new(new_interval);
@@ -295,21 +390,34 @@ impl ArithmeticExpression for PlusPlus {
                         //println!("state print in plus plus {}", abs_state);
                         new_interval
                     } else {
-                        let new_int= AbstractInterval::new(m, upper);
-                        abs_state
-                            .variables
-                            .insert(self.var.to_string(), abstract_domain::AbstractDomain { value: new_int  });
+                        let new_int= AbstractInterval::Bounded { lower: m, upper };
+                        // abs_state
+                        //     .variables
+                        //     .insert(self.var.to_string(), abstract_domain::AbstractDomain { value: new_int  });
+                        abs_state.update_interval(self.var.to_string().as_str(), new_int);
                         new_int
                     }
                 } else {
-                    let new_int= AbstractInterval::new(lower, n);
-                    abs_state
-                            .variables
-                            .insert(self.var.to_string(), abstract_domain::AbstractDomain { value: new_int });
+                    let new_int= AbstractInterval::Bounded { lower, upper: n };
+                    // abs_state
+                    //         .variables
+                    //         .insert(self.var.to_string(), abstract_domain::AbstractDomain { value: new_int });
+                    abs_state.update_interval(self.var.to_string().as_str(), new_int);
                     new_int
                 }
             }
         }
+    }
+    fn extract_variables(&self) -> Vec<&Variable> {
+        let mut vars = Vec::new();
+        // Se il lato sinistro è una variabile o contiene variabili
+        if let Some(v) = self.var.as_variable() {
+            vars.push(v);
+        } else {
+            // Se non è una variabile diretta, prova a estrarle ricorsivamente
+            vars.extend(self.var.extract_variables());
+        }
+        vars
     }
 }
 
@@ -341,6 +449,7 @@ impl ArithmeticExpression for MinusMinus {
         format!("{}--", self.var.to_string())
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
+        println!("minus minus evaluation");
         let m = *M.lock().unwrap();
         let n = *N.lock().unwrap();
         let value = self.var.abs_evaluate(abs_state);
@@ -350,24 +459,43 @@ impl ArithmeticExpression for MinusMinus {
             AbstractInterval::Bounded { lower, upper } => {
                 if lower> m {
                     if upper< n {
+                        println!("normal case in minus minus {}", value);
                         let newlower = lower - 1;
+                        println!("newlower in minus minus {}", newlower);
                         let new_interval = AbstractInterval::new(newlower, upper);
-                        let new_value = AbstractDomain::new(new_interval);
-                        abs_state
-                            .variables
-                            .insert(self.var.to_string(), new_value);
+                        print!("new interval in minus minus {}", new_interval);
+                        //let new_value = AbstractDomain::new(new_interval);
+                        // abs_state
+                        //     .variables
+                        //     .insert(self.var.to_string(), new_value);
+                        abs_state.update_interval(self.var.to_string().as_str(), new_interval);
                         new_interval
                     } else {
-                        let new_int =AbstractInterval::new(m, upper);
-                        abs_state.variables.insert(self.var.to_string(), abstract_domain::AbstractDomain::new(new_int));
+                        let new_int =AbstractInterval::Bounded { lower, upper: n };
+                        // abs_state.variables.insert(self.var.to_string(), abstract_domain::AbstractDomain::new(new_int));
+                        abs_state.update_interval(self.var.to_string().as_str(), new_int);
+                        // abs_state.bottom();
                         new_int
                     }
                 } else {
-                    let new_int=AbstractInterval::new(lower, n);
-                    abs_state.variables.insert(self.var.to_string(), abstract_domain::AbstractDomain::new(new_int));
+                    let new_int=AbstractInterval::Bounded { lower: m, upper };
+                    // abs_state.variables.insert(self.var.to_string(), abstract_domain::AbstractDomain::new(new_int));
+                    abs_state.update_interval(self.var.to_string().as_str(), new_int);
+                    // abs_state.bottom();
                     new_int
                 }
             }
         }
+    }
+    fn extract_variables(&self) -> Vec<&Variable> {
+        let mut vars = Vec::new();
+        // Se il lato sinistro è una variabile o contiene variabili
+        if let Some(v) = self.var.as_variable() {
+            vars.push(v);
+        } else {
+            // Se non è una variabile diretta, prova a estrarle ricorsivamente
+            vars.extend(self.var.extract_variables());
+        }
+        vars
     }
 }

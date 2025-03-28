@@ -33,12 +33,14 @@ impl Statement for Assign {
         state.clone()
     }
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
-            let mut new_state = state.clone();
-            let value = self.expr.abs_evaluate(&mut new_state);
+        let mut new_state = state.clone();
+        let value = self.expr.abs_evaluate(&mut new_state);
+        println!("assignment for variable {:?}  rhs {:?} evaluation {} in state {}", self.var_name, self.expr,value, new_state);
             state.variables.insert(
                 self.var_name.as_variable().unwrap().to_string(),
                 AbstractDomain::new(value),
             );
+            println!("state after assingment {}", state);
             state.clone()
         
     }
@@ -213,14 +215,18 @@ impl Statement for While {
             }
             _prev_state = current_state.clone();
         }
-        println!("CYCLE INVARIANT: {}", current_state);
+        let  invariant = current_state.clone();
+        println!("CYCLE INVARIANT: {}", invariant);
         _prev_state = precondition.clone();
         if *narrow == true {
             loop {
+                println!("NARROWING PHASE, current state {}", current_state);
                 _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
+                println!("guard result {}", _guard_result);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
                 _body_result = _prev_state.state_lub(&_body_result.clone());
                 current_state = current_state.clone().state_narrowing(&_body_result.clone());
+                println!("prev state {}   current state {}", _prev_state ,current_state);
                 if current_state.clone() == _prev_state.clone() {
                     break;
                 }
@@ -228,7 +234,7 @@ impl Statement for While {
             }
         }
         // filtering with !guard
-        let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        let postcondition = self.guard.abs_evaluate(&mut invariant.clone(), true);
         state.variables.extend(postcondition.variables.clone());
         println!("CYCLE POSTCONDITION: {}", postcondition);
         postcondition

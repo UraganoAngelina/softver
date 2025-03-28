@@ -1,9 +1,9 @@
 use crate::abstract_interval::AbstractInterval;
-use crate::{abstract_state, ANALYSIS_FLAG};
 use crate::ast::{arithmetic::*, boolean::*, statement::*, State};
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenType;
+use crate::{abstract_state, ANALYSIS_FLAG};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -61,25 +61,25 @@ impl Display for TokenVec {
 
 #[derive(Debug)]
 pub enum Any {
-    BooleanExpression(Box<dyn BooleanExpression<Q=AbstractInterval>>),
-    ArithmeticExpression(Box<dyn ArithmeticExpression<Q=AbstractInterval>>),
-    Statement(Box<dyn Statement<Q=AbstractInterval>>),
+    BooleanExpression(Box<dyn BooleanExpression<Q = AbstractInterval>>),
+    ArithmeticExpression(Box<dyn ArithmeticExpression<Q = AbstractInterval>>),
+    Statement(Box<dyn Statement<Q = AbstractInterval>>),
     Token(Token),
 }
 
 impl Any {
     // Funzione per creare un Any da una BooleanExpression
-    pub fn from_boolean_expr(expr: Box<dyn BooleanExpression<Q=AbstractInterval>>) -> Self {
+    pub fn from_boolean_expr(expr: Box<dyn BooleanExpression<Q = AbstractInterval>>) -> Self {
         Any::BooleanExpression(expr)
     }
 
     // Funzione per creare un Any da una ArithmeticExpression
-    pub fn from_arithmetic_expr(expr: Box<dyn ArithmeticExpression<Q=AbstractInterval>>) -> Self {
+    pub fn from_arithmetic_expr(expr: Box<dyn ArithmeticExpression<Q = AbstractInterval>>) -> Self {
         Any::ArithmeticExpression(expr)
     }
 
     // Funzione per creare un Any da uno Statement
-    pub fn from_statement(stmt: Box<dyn Statement<Q=AbstractInterval>>) -> Self {
+    pub fn from_statement(stmt: Box<dyn Statement<Q = AbstractInterval>>) -> Self {
         Any::Statement(stmt)
     }
 
@@ -89,7 +89,9 @@ impl Any {
     }
 
     // Funzione per ottenere un riferimento a ArithmeticExpression (se presente)
-    pub fn as_arithmetic_expr(&self) -> Option<&Box<dyn ArithmeticExpression<Q=AbstractInterval>>> {
+    pub fn as_arithmetic_expr(
+        &self,
+    ) -> Option<&Box<dyn ArithmeticExpression<Q = AbstractInterval>>> {
         if let Any::ArithmeticExpression(expr) = self {
             Some(expr)
         } else {
@@ -98,7 +100,7 @@ impl Any {
     }
 
     // Funzione per ottenere un riferimento a Statement (se presente)
-    pub fn as_statement(&self) -> Option<&Box<dyn Statement<Q=AbstractInterval>>> {
+    pub fn as_statement(&self) -> Option<&Box<dyn Statement<Q = AbstractInterval>>> {
         if let Any::Statement(stmt) = self {
             Some(stmt)
         } else {
@@ -292,7 +294,7 @@ pub fn parse_atomic(tok_vec: &mut AnyVec, index: &mut usize) {
 pub fn parse_arithmetic_subexpression(
     tok_vec: &mut AnyVec,
     index: &mut usize,
-) -> Box<dyn ArithmeticExpression<Q=AbstractInterval>> {
+) -> Box<dyn ArithmeticExpression<Q = AbstractInterval>> {
     // Incrementa l'indice per saltare la parentesi aperta
     *index += 1;
 
@@ -345,7 +347,7 @@ pub fn parse_arithmetic_subexpression(
 pub fn parse_bool_subexpression(
     tok_vec: &mut AnyVec,
     index: &mut usize,
-) -> Box<dyn BooleanExpression<Q=AbstractInterval>> {
+) -> Box<dyn BooleanExpression<Q = AbstractInterval>> {
     // Incrementa l'indice per saltare la parentesi aperta
     *index += 1;
 
@@ -397,10 +399,18 @@ pub fn parse_bool_subexpression(
 
 pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
     while *index < tok_vec.nodes.len() {
+        println!("analyzed tokens {}", tok_vec.nodes[*index]);
         // Controlla se il nodo attuale è un token
         if let Some(Any::Token(token)) = tok_vec.nodes.get(*index) {
             match token.token_ty {
                 TokenType::And => {
+                    println!("and found");
+                    let mut j = 0;
+                    while j < tok_vec.nodes.len() {
+                        println!("{:?}", tok_vec.nodes[j]);
+
+                        j = j + 1;
+                    }
                     // Prima dell' and si trova l'operando sinistro (left)
                     if *index == 0 {
                         unreachable!("Errore di parsing: operando sinistro mancante per l'and.");
@@ -418,9 +428,10 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                     if *index >= tok_vec.nodes.len() {
                         unreachable!("Errore di parsing: operando destro mancante per l'and.");
                     }
-
+                    println!("and rhs {}", tok_vec.nodes[*index]);
                     // Se trovi una parentesi aperta, esegui parse_bool_subexpression
                     let right = if let Some(node) = tok_vec.nodes.get(*index) {
+                    
                         match node {
                             Any::Token(token) => {
                                 if let TokenType::Bra = token.token_ty {
@@ -829,6 +840,14 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                             "Errore di parsing: operando sinistro mancante per l'op booleano >."
                         );
                     }
+                    println!("great found");
+                    let mut j = 0;
+                    while j < tok_vec.nodes.len() {
+                        println!("{:?}", tok_vec.nodes[j]);
+
+                        j = j + 1;
+                    }
+                    println!("great lhs {}", tok_vec.nodes[*index - 1]);
                     let left_node = tok_vec.nodes.remove(*index - 1);
 
                     let left = match left_node {
@@ -842,7 +861,14 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                             "Errore di parsing: operando destro mancante per l'op booleano >."
                         );
                     }
+                    println!("printing vector after left remove");
+                    let mut j = 0;
+                    while j < tok_vec.nodes.len() {
+                        println!("{:?}", tok_vec.nodes[j]);
 
+                        j = j + 1;
+                    }
+                    println!("great rhs {}", tok_vec.nodes[*index]);
                     // Se trovi una parentesi aperta, esegui parse_arithmetic_subexpression
                     let right = if let Some(node) = tok_vec.nodes.get(*index) {
                         match node {
@@ -872,16 +898,33 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                             "Errore di parsing: nessun token trovato a destra dell'op booleano >."
                         );
                     };
+
                     // Crea l'oggetto Grea con left e right
                     let great_expr = Great { left, right };
+                    println!("expression extracted {:?}", great_expr);
+                    println!("printing the vector before insertion ");
+                    let mut j = 0;
+                    while j < tok_vec.nodes.len() {
+                        println!("{:?}", tok_vec.nodes[j]);
 
+                        j = j + 1;
+                    }
                     // Reinserisci l'oggetto Less nel vettore come BooleanExpression
                     tok_vec
                         .nodes
                         .insert(*index - 1, Any::BooleanExpression(Box::new(great_expr)));
 
+                    println!("printing the vector after insertion ");
+                    let mut j = 0;
+                    while j < tok_vec.nodes.len() {
+                        println!("{:?}", tok_vec.nodes[j]);
+
+                        j = j + 1;
+                    }
+                    println!("deleting token {}", tok_vec.nodes[*index]);
                     //elimino il token contenente l'operatore <
                     tok_vec.nodes.remove(*index);
+                    // *index -= 1;
                 }
                 _ => {}
             }
@@ -1496,9 +1539,9 @@ pub fn parse_for_block(
     any_vec: &mut AnyVec,
     index: &mut usize,
 ) -> Option<(
-    Box<dyn Statement<Q=AbstractInterval>>,
-    Box<dyn BooleanExpression<Q=AbstractInterval>>,
-    Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    Box<dyn Statement<Q = AbstractInterval>>,
+    Box<dyn BooleanExpression<Q = AbstractInterval>>,
+    Box<dyn ArithmeticExpression<Q = AbstractInterval>>,
 )> {
     let mut itindex = index.clone();
     let mut start = 0;
@@ -1589,7 +1632,7 @@ pub fn parse_for_block(
 pub fn parse_substatement_block(
     any_vec: &mut AnyVec,
     index: &mut usize,
-) -> Option<Box<dyn Statement<Q=AbstractInterval>>> {
+) -> Option<Box<dyn Statement<Q = AbstractInterval>>> {
     let start = *index;
     let mut depth = 0;
 
@@ -1757,7 +1800,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                             );
                         }
                     }
-                    *index-=1;
+                    *index -= 1;
                 }
                 TokenType::If => {
                     let startpos = index.clone();
@@ -1933,7 +1976,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         Some(statement) => statement,
                         None => Box::new(Skip), // Se il body è vuoto, utilizza uno statement Skip come default
                     };
-                    
+
                     // Creazione dell'oggetto for
                     let for_stmt = For {
                         init,
@@ -2022,8 +2065,15 @@ pub fn analyze(program: String) {
     for token in tokenized_program.tokens {
         any_vec.push_token(token);
     }
+    println!("after lexing");
+    let mut j = 0;
+    while j < any_vec.nodes.len() {
+        println!("{:?}", any_vec.nodes[j]);
 
-    let mut index:  usize;
+        j = j + 1;
+    }
+
+    let mut index: usize;
     //----------------------------------------------------------------------------------------------------------------------------------------------------
     //PARSING SECTION
     //----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2034,11 +2084,27 @@ pub fn analyze(program: String) {
     parse_arithmetic_unop(&mut any_vec, &mut index);
     index = 0;
     parse_bool_unop(&mut any_vec, &mut index);
+    println!("before bool parsing ");
+    let mut j = 0;
+    while j < any_vec.nodes.len() {
+        println!("{:?}", any_vec.nodes[j]);
+
+        j = j + 1;
+    }
     //arithmetic expressions
     index = 0;
     parse_arithmetic_expression(&mut any_vec, &mut index);
     index = 0;
     parse_bool_expression(&mut any_vec, &mut index);
+    index=0;
+    parse_bool_expression(&mut any_vec, &mut index);
+    println!("bool parsed");
+    let mut j = 0;
+    while j < any_vec.nodes.len() {
+        println!("{:?}", any_vec.nodes[j]);
+
+        j = j + 1;
+    }
     index = 0;
     parse_assignment(&mut any_vec, &mut index);
     //statements
@@ -2049,9 +2115,8 @@ pub fn analyze(program: String) {
     //println!("statements parsed: ");
     let mut j = 0;
     while j < any_vec.nodes.len() {
-        if any_vec.nodes[j].as_token() == None {
-            println!("{}", any_vec.nodes[j].to_string());
-        }
+        println!("{}", any_vec.nodes[j].to_string());
+
         j = j + 1;
     }
     println!("********EVALUATION********\n");
@@ -2062,6 +2127,7 @@ pub fn analyze(program: String) {
     let mut abs_state = abstract_state::AbstractState::new();
     let mut state = State::new();
     println!("INITIAL PROGRAM STATE : {:#?}", state.clone());
+    println!("INITIAL ABSTRACT PROGRAM STATE : {}", abs_state);
 
     let analysis_type = *ANALYSIS_FLAG.lock().expect("Failed to lock analysis flag");
 
@@ -2069,8 +2135,11 @@ pub fn analyze(program: String) {
         println!("STARTING DENOTATIONAL SEMANTICS ANALYSIS");
         if let Some(last_node) = any_vec.nodes.last() {
             if let Some(statement) = last_node.as_statement() {
-                let new_state =statement.evaluate(&mut state);
-                println!("state printing after code evaluation {:#?}", new_state.clone());
+                let new_state = statement.evaluate(&mut state);
+                println!(
+                    "state printing after code evaluation {:#?}",
+                    new_state.clone()
+                );
             }
         }
     } else {
