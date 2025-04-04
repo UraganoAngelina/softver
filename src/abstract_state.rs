@@ -33,7 +33,7 @@ where
         // Se ci sono variabili, verificare se una di esse è Top
         self.variables
             .values()
-            .any(|interval| interval.value.is_top())
+            .any(|interval| interval.value._is_top())
     }
     // Builds bottom state ⊥
     pub fn bottom(&self) -> AbstractState<Q> {
@@ -254,24 +254,29 @@ where
 
 impl<Q> fmt::Display for AbstractState<Q>
 where
-    Q: AbstractDomainOps + Clone + Debug,
+    Q: AbstractDomainOps + Clone + fmt::Display
+    + Copy         
+    + Ord          
+    + From<i64>    
+    + num_traits::Zero  
+    + fmt::Display, 
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        println!("state flag: {}", self.is_bottom );
+        // println!("state flag: {}", self.is_bottom );
         if self.is_bottom {
             let variables_str: Vec<String> = self
                 .variables
                 .iter()
-                .map(|(var, domain)| format!("{} : {:?}", var, domain))
+                .map(|(var, domain)| format!("{}: {}", var, domain))
                 .collect();
-            write!(f, "Bottom ⊥  {{ {} }}", variables_str.join(","))
+            write!(f, "Bottom ⊥  {{{}}}", variables_str.join(", "))
         } else {
             let variables_str: Vec<String> = self
                 .variables
                 .iter()
-                .map(|(var, domain)| format!("{}: {:?}", var, domain))
+                .map(|(var, domain)| format!("{}: {}", var, domain))
                 .collect();
-            write!(f, "{{ {} }}", variables_str.join(", "))
+            write!(f, "{{{}}}", variables_str.join(", "))
         }
     }
 }

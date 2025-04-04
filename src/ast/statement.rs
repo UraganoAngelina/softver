@@ -93,6 +93,7 @@ impl Statement for Concat {
             let new_state = self
             .second
             .abs_evaluate(&mut self.first.abs_evaluate(state));
+        state.is_bottom= new_state.is_bottom;
         state.variables.extend(new_state.variables.clone());
         new_state
         
@@ -133,14 +134,18 @@ impl Statement for IfThenElse {
     }
 
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
+        println!("if eval");
         let then_state = self
             .guard
             .abs_evaluate(&mut self.true_expr.abs_evaluate(state), false);
         let else_state = self
             .guard
             .abs_evaluate(&mut self.false_expr.abs_evaluate(state), false);
-
+        println!("then state {}", then_state);
+        println!("else state {}", else_state);
         let final_state = AbstractState::state_lub(&then_state, &else_state);
+        println!("state lub {}", final_state);
+        state.is_bottom= final_state.is_bottom;
         state.variables.extend(final_state.variables.clone());
         final_state
     }
@@ -224,7 +229,7 @@ impl Statement for While {
                 _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
                 println!("guard result {}", _guard_result);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-                _body_result = _prev_state.state_lub(&_body_result.clone());
+                _body_result = _prev_state.state_glb(&_body_result.clone());
                 current_state = current_state.clone().state_narrowing(&_body_result.clone());
                 println!("prev state {}   current state {}", _prev_state ,current_state);
                 if current_state.clone() == _prev_state.clone() {
@@ -235,6 +240,7 @@ impl Statement for While {
         }
         // filtering with !guard
         let postcondition = self.guard.abs_evaluate(&mut invariant.clone(), true);
+        state.is_bottom= postcondition.is_bottom;
         state.variables.extend(postcondition.variables.clone());
         println!("CYCLE POSTCONDITION: {}", postcondition);
         postcondition
@@ -329,7 +335,7 @@ impl Statement for For {
             loop {
                 _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-                _body_result = _prev_state.state_lub(&_body_result.clone());
+                _body_result = _prev_state.state_glb(&_body_result.clone());
                 _increment_result = self.increment.abs_evaluate(&mut _body_result);
                 if *narrow == true {current_state = current_state.state_narrowing(&_body_result.clone());}
                 if current_state == _prev_state {
@@ -340,6 +346,7 @@ impl Statement for For {
         
         // filtering with !guard
         let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        state.is_bottom= postcondition.is_bottom;
         println!("CYCLE POSTCONDITION: {}", postcondition);
         state.clone()
     }
@@ -432,6 +439,7 @@ impl Statement for RepeatUntil {
         }
         // filtering with !guard
         let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        state.is_bottom= postcondition.is_bottom;
         state.variables.extend(postcondition.variables.clone());
         println!("CYCLE POSTCONDITION: {}", postcondition);
         state.clone()

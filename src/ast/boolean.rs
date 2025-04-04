@@ -1,11 +1,10 @@
 use crate::abstract_domain::AbstractDomainOps;
-use crate::abstract_interval::AbstractInterval;
-use crate::abstract_state::AbstractState;
+use crate::{abstract_interval::AbstractInterval, abstract_state::AbstractState};
 use crate::ast::arithmetic::ArithmeticExpression;
 use crate::ast::State;
 use std::fmt::Debug;
 
-use super::arithmetic::{Minus, Numeral};
+use super::arithmetic::{Add, Minus, Numeral};
 
 pub trait BooleanExpression: Debug {
     type Q: AbstractDomainOps + PartialEq + Clone + Debug;
@@ -76,96 +75,27 @@ impl BooleanExpression for Equal {
         state: &mut AbstractState<Self::Q>,
         flag: bool,
     ) -> AbstractState<Self::Q> {
-        // if !flag {
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
-
-        //     match (left_eval, right_eval) {
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //         (AbstractInterval::Bounded { .. }, AbstractInterval::Bounded { .. })
-        //             if left_eval == right_eval =>
-        //         {
-        //             // Se gli intervalli sono diversi, non restringiamo ulteriormente lo stato
-        //             state.clone()
-        //         }
-        //         _ => AbstractState::bottom(state), // Se gli intervalli sono uguali, lo stato diventa Bottom
-        //     }
-        // } else {
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
-
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
-
-        //     match (left_eval, right_eval) {
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //         (AbstractInterval::Bounded { .. }, AbstractInterval::Bounded { .. })
-        //             if left_eval != right_eval =>
-        //         {
-        //             if let Some(var_name) = self.left.as_variable() {
-        //                 state.update_interval(&var_name.value, left_eval.clone());
-        //                 state.clone()
-        //             } else {
-        //                 unreachable!("Left operand of == must be a variable!");
-        //             }
-        //         }
-        //         _ => AbstractState::bottom(state),
-        //     }
-        // }
-
-        // if self.left.abs_evaluate(&mut state.clone()).is_bottom() || self.right.abs_evaluate(&mut state.clone()).is_bottom(){
-        //     AbstractState::bottom(state);
-        // }
-        // let left_op = LessEqual {
-        //     left: self.left.clone_box(),
-        //     right: self.right.clone_box(),
-        // };
-        // let right_op = LessEqual {
-        //     left: self.right.clone_box(),
-        //     right: self.right.clone_box(),
-        // };
-        // let disjunction = Box::new(And {
-        //     left: Box::new(left_op),
-        //     right: Box::new(right_op),
-        // });
-        // let retstate=disjunction.abs_evaluate(state, flag);
-        // println!("return state in equal test {}", retstate);
-        // retstate
-        // (a - b <= -1) && (b - a <= -1)
-        let lleft_op = Box::new(Minus {
-            left: self.left.clone_box(),
-            right: self.right.clone_box(),
-        });
-        let rleft_op = Box::new(Minus {
-            left: self.right.clone_box(),
-            right: self.left.clone_box(),
-        });
-        let right_op = Box::new(Numeral(0));
-        let lleq = Box::new(LessEqual {
-            left: lleft_op.clone_box(),
-            right: right_op.clone_box(),
-        });
-        let rleq = Box::new(LessEqual {
-            left: rleft_op.clone_box(),
-            right: right_op.clone_box(),
-        });
-        let disjunction = Box::new(And {
-            left: lleq.clone_box(),
-            right: rleq.clone_box(),
-        });
-        let ret: AbstractState<AbstractInterval> = disjunction.abs_evaluate(state, flag);
-        println!("not equal return state {}", ret);
-        ret
+        if self.left.abs_evaluate(state).is_bottom() || self.right.abs_evaluate(state).is_bottom() {
+            AbstractState::bottom(state)
+        } else {
+            //(a - b <= 0) and (b - a <=0)
+            let left = Box::new(LessEqual {
+                left: Box::new(Minus {
+                    left: self.left.clone_box(),
+                    right: self.right.clone_box(),
+                }),
+                right: Box::new(Numeral(0)),
+            });
+            let right = Box::new(LessEqual {
+                left: Box::new(Minus {
+                    left: self.right.clone_box(),
+                    right: self.left.clone_box(),
+                }),
+                right: Box::new(Numeral(0)),
+            });
+            let canonical = Box::new(And { left, right });
+            canonical.abs_evaluate(state, flag)
+        }
     }
     fn to_string(&self) -> String {
         format!("{} = {}", self.left.to_string(), self.right.to_string())
@@ -195,98 +125,29 @@ impl BooleanExpression for NotEqual {
         state: &mut AbstractState<Self::Q>,
         flag: bool,
     ) -> AbstractState<Self::Q> {
-        // if !flag {
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
-
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
-
-        //     match (left_eval, right_eval) {
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //         (AbstractInterval::Bounded { .. }, AbstractInterval::Bounded { .. })
-        //             if left_eval != right_eval =>
-        //         {
-        //             // Se gli intervalli sono diversi, non restringiamo ulteriormente lo stato
-        //             state.clone()
-        //         }
-        //         _ => AbstractState::bottom(state), // Se gli intervalli sono uguali, lo stato diventa Bottom
-        //     }
-        // } else {
-        //     if state.is_bottom() {
-        //         return AbstractState::bottom(state);
-        //     }
-
-        //     let left_eval = self.left.abs_evaluate(state);
-        //     let right_eval = self.right.abs_evaluate(state);
-
-        //     match (left_eval, right_eval) {
-        //         (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-        //             AbstractState::bottom(state)
-        //         }
-        //         (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-        //         (AbstractInterval::Bounded { .. }, AbstractInterval::Bounded { .. })
-        //             if left_eval == right_eval =>
-        //         {
-        //             if let Some(var_name) = self.left.as_variable() {
-        //                 state.update_interval(&var_name.value, left_eval.clone());
-        //                 state.clone()
-        //             } else {
-        //                 unreachable!("Left operand of != must be a variable!");
-        //             }
-        //         }
-        //         _ => AbstractState::bottom(state),
-        //     }
-        // }
-        // if self.left.abs_evaluate(state).is_bottom() || self.right.abs_evaluate(state).is_bottom() {
-        //     AbstractState::bottom(state);
-        // }
-        // let left_op = Less {
-        //     left: self.left.clone_box(),
-        //     right: self.right.clone_box(),
-        // };
-        // let right_op = Less {
-        //     left: self.right.clone_box(),
-        //     right: self.left.clone_box(),
-        // };
-        // let union = Box::new(Or {
-        //     left: Box::new(left_op),
-        //     right: Box::new(right_op),
-        // });
-        // let retstate = union.abs_evaluate(state, flag);
-        // println!("return state in not equal test {}", retstate);
-        // retstate
-
-        // (a - b <= 0) && (b - a <= 0)
-        let lleft_op = Box::new(Minus {
-            left: self.left.clone_box(),
-            right: self.right.clone_box(),
+        // (b - a + 1 <=0) or (a - b + 1 <=0)
+        let left = Box::new(LessEqual {
+            left: Box::new(Add {
+                left: Box::new(Minus {
+                    left: self.right.clone_box(),
+                    right: self.left.clone_box(),
+                }),
+                right: Box::new(Numeral(1)),
+            }),
+            right: Box::new(Numeral(0)),
         });
-        let rleft_op = Box::new(Minus {
-            left: self.right.clone_box(),
-            right: self.left.clone_box(),
+        let right = Box::new(LessEqual {
+            left: Box::new(Add {
+                left: Box::new(Minus {
+                    left: self.left.clone_box(),
+                    right: self.right.clone_box(),
+                }),
+                right: Box::new(Numeral(1)),
+            }),
+            right: Box::new(Numeral(0)),
         });
-        let right_op = Box::new(Numeral(-1));
-        let lleq = Box::new(LessEqual {
-            left: lleft_op.clone_box(),
-            right: right_op.clone_box(),
-        });
-        let rleq = Box::new(LessEqual {
-            left: rleft_op.clone_box(),
-            right: right_op.clone_box(),
-        });
-        let union = Box::new(Or {
-            left: lleq.clone_box(),
-            right: rleq.clone_box(),
-        });
-        let ret = union.abs_evaluate(state, flag);
-        println!("ret expression {:?}", union);
-        println!("not equal return state {}", ret);
-        ret
+        let canonical = Box::new(Or { left, right });
+        canonical.abs_evaluate(state, flag)
     }
     fn to_string(&self) -> String {
         format!("{} != {}", self.left.to_string(), self.right.to_string())
@@ -315,116 +176,19 @@ impl BooleanExpression for GreatEqual {
         state: &mut AbstractState<Self::Q>,
         flag: bool,
     ) -> AbstractState<Self::Q> {
-        if !flag {
-            println!("great equal normal eval in state {}", state);
-            if self.left.abs_evaluate(state).is_bottom()
-                || self.right.abs_evaluate(state).is_bottom()
-            {
-                return AbstractState::bottom(state);
-            }
-
-            let left_eval = self.left.abs_evaluate(state);
-            let right_eval = self.right.abs_evaluate(state);
-
-            match (left_eval, right_eval) {
-                // Caso base: uno dei due è Bottom
-                (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-                    AbstractState::bottom(state)
-                }
-
-                // Caso concreto: Entrambi gli intervalli sono bounded
-                (
-                    AbstractInterval::Bounded {
-                        lower: l1,
-                        upper: u1,
-                    },
-                    AbstractInterval::Bounded {
-                        lower: l2,
-                        upper: u2,
-                    },
-                ) => {
-                    // caso x >= y (con x variabile)
-                    if let (Some(left_var), Some(_right_var)) =
-                        (self.left.as_variable(), self.right.as_variable())
-                    {
-                        if u1 >= l2 {
-                            // Aggiorniamo l'intervallo della variabile destra (speculare al caso <=)
-                            state.update_interval(
-                                &_right_var.value,
-                                AbstractInterval::Bounded {
-                                    lower: std::cmp::max(l2, l1),
-                                    upper: u2,
-                                },
-                            );
-                            // Aggiorniamo l'intervallo della variabile sinistra
-                            state.update_interval(
-                                &left_var.value,
-                                AbstractInterval::Bounded {
-                                    lower: std::cmp::max(l1, l2),
-                                    upper: u1,
-                                },
-                            );
-                            state.clone()
-                        } else {
-                            // Non soddisfatto: Bottom
-                            state.update_interval(&_right_var.value, AbstractInterval::Bottom);
-                            AbstractState::bottom(state)
-                        }
-                    } else if let (Some(_left_var), Some(right_num)) = (
-                        self.left.as_any().downcast_ref::<Numeral>(),
-                        self.right.as_variable(),
-                    ) {
-                        if u1 >= l2 {
-                            // Aggiorniamo l'intervallo della variabile destra
-                            state.update_interval(
-                                &right_num.value,
-                                AbstractInterval::Bounded {
-                                    lower: std::cmp::max(l2, l1),
-                                    upper: u2,
-                                },
-                            );
-                            println!("returning state in geq eval {}", state);
-                            state.clone()
-                        } else {
-                            // Non soddisfatto: Bottom
-                            state.update_interval(&right_num.value, AbstractInterval::Bottom);
-                            println!("returning bottom case in geq eval {}", state);
-                            AbstractState::bottom(state)
-                        }
-                    } else {
-                        println!(
-                            "evaluating {} >= {} in state {}",
-                            left_eval, right_eval, state
-                        );
-                        println!("returning top case in geq eval {}", state);
-                        // Se il lato destro non è una variabile, ritorno lo stato iniziale
-                        state.clone()
-                    }
-                }
-                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
-            }
-        } else {
-            println!("filtering with !guard in geq in state {}", state);
-            // if self.left.abs_evaluate(state).is_bottom()
-            //     || self.right.abs_evaluate(state).is_bottom()
-            // {
-            //     AbstractState::bottom(state);
-            // }
-            if state.is_bottom() {
-                return AbstractState::bottom(&state);
-            }
-            let leq = LessEqual {
-                left: self.right.clone_box(),
-                right: self.left.clone_box(),
-            };
-            //devo trasformare x >= y in y<=x
-            // let leq = LessEqual {
-            //     left: self.right.clone_box(),
-            //     right: self.left.clone_box(),
-            // };
-            let my_flag = !flag;
-            leq.abs_evaluate(state, my_flag)
+        if self.left.abs_evaluate(state).is_bottom() || self.right.abs_evaluate(state).is_bottom() {
+            AbstractState::bottom(state);
         }
+
+        // b - a  <= 0
+        let lhs = Box::new(Minus{left: self.right.clone_box(), right: self.left.clone_box()});
+         
+        let rhs = Box::new(Numeral(0));
+        let canonical = Box::new(LessEqual {
+            left: lhs,
+            right: rhs,
+        });
+        canonical.abs_evaluate(state, flag)
     }
     fn to_string(&self) -> String {
         format!("{} >= {}", self.left.to_string(), self.right.to_string())
@@ -454,19 +218,21 @@ impl BooleanExpression for Great {
         if self.left.abs_evaluate(state).is_bottom() || self.right.abs_evaluate(state).is_bottom() {
             AbstractState::bottom(state);
         }
-        // b - a <= -1
-        let lhs = Box::new(Minus {
-            left: self.right.clone_box(),
-            right: self.left.clone_box(),
+
+        // b - a + 1 <= 0
+        let lhs = Box::new(Add {
+            left: Box::new(Minus {
+                left: self.right.clone_box(),
+                right: self.left.clone_box(),
+            }),
+            right: Box::new(Numeral(1)),
         });
-        let rhs = Box::new(Numeral(-1));
-        let leq = Box::new(LessEqual {
+        let rhs = Box::new(Numeral(0));
+        let canonical = Box::new(LessEqual {
             left: lhs,
             right: rhs,
         });
-        let ret = leq.abs_evaluate(state, flag);
-        println!("great return state {}", ret);
-        ret
+        canonical.abs_evaluate(state, flag)
     }
     fn to_string(&self) -> String {
         format!("{} > {}", self.left.to_string(), self.right.to_string())
@@ -569,76 +335,6 @@ impl BooleanExpression for LessEqual {
                             AbstractState::bottom(state)
                         }
                     } else {
-                        if let (Some(lhs), Some(rhs)) = (
-                            self.left.as_any().downcast_ref::<Minus>(),
-                            self.right.as_any().downcast_ref::<Numeral>(),
-                        ) {
-                            let c = rhs.0; // ad esempio -1
-
-                            // Prova a estrarre le variabili dalla sottostruttura di Minus in maniera ricorsiva
-                            let vars = lhs.extract_variables();
-                            match vars.len() {
-                                2 => {
-                                    if l1 <= u2 {
-                                        // Caso in cui entrambe sono variabili, gestisci come prima
-                                        let var_x = vars[0];
-                                        let var_y = vars[1];
-                                        let new_x_upper = std::cmp::min(u1, u2 + c);
-                                        // y deve essere maggiore o uguale a x_low + 1
-                                        let new_y_lower = std::cmp::max(l2, l1 - c);
-                                        state.update_interval(
-                                            &var_x.value,
-                                            AbstractInterval::Bounded {
-                                                lower: l1,
-                                                upper: new_x_upper,
-                                            },
-                                        );
-                                        state.update_interval(
-                                            &var_y.value,
-                                            AbstractInterval::Bounded {
-                                                lower: new_y_lower,
-                                                upper: u1,
-                                            },
-                                        );
-                                        return state.clone();
-                                    } else {
-                                        let var_x = vars[0];
-                                        state.update_interval(
-                                            &var_x.value,
-                                            AbstractInterval::Bottom,
-                                        );
-                                        return AbstractState::bottom(state);
-                                    }
-                                }
-                                1 => {
-                                    if l1 <= u2 {
-                                        // Caso in cui entrambe sono variabili, gestisci come prima
-                                        let var_x = vars[0];
-                                        let new_x_upper = std::cmp::min(u1, u2 + c);
-                                        state.update_interval(
-                                            &var_x.value,
-                                            AbstractInterval::Bounded {
-                                                lower: l1,
-                                                upper: new_x_upper,
-                                            },
-                                        );
-                                        
-                                        return state.clone();
-                                    } else {
-                                        let var_x = vars[0];
-                                        state.update_interval(
-                                            &var_x.value,
-                                            AbstractInterval::Bottom,
-                                        );
-                                        return AbstractState::bottom(state);
-                                    }
-                                }
-                                _ => {
-                                    //top case no variables found in lhs
-                                    return state.clone()
-                                }
-                            }
-                        }
                         // Se il lato sinistro non è una variabile, ritorno lo stato iniziale
                         state.clone()
                     }
@@ -647,11 +343,11 @@ impl BooleanExpression for LessEqual {
             }
         } else {
             println!("filtering with !guard in leq in state {}", state);
-            // if self.left.abs_evaluate(state).is_bottom()
-            //     || self.right.abs_evaluate(state).is_bottom()
-            // {
-            //     AbstractState::bottom(state);
-            // }
+            if self.left.abs_evaluate(state).is_bottom()
+                || self.right.abs_evaluate(state).is_bottom()
+            {
+                AbstractState::bottom(state);
+            }
             println!(
                 "lhs  rhs {:?} >= {:?} in final filtering",
                 self.left, self.right
@@ -659,17 +355,12 @@ impl BooleanExpression for LessEqual {
             if state.is_bottom() {
                 return AbstractState::bottom(&state);
             }
-            let geq = GreatEqual {
+            let gr = Great {
                 left: self.left.clone_box(),
                 right: self.right.clone_box(),
             };
-            //devo trasformare x >= y in y<=x
-            // let leq = LessEqual {
-            //     left: self.right.clone_box(),
-            //     right: self.left.clone_box(),
-            // };
             let my_flag = !flag;
-            geq.abs_evaluate(state, my_flag)
+            gr.abs_evaluate(state, my_flag)
         }
     }
     fn to_string(&self) -> String {
@@ -704,19 +395,33 @@ impl BooleanExpression for Less {
         }
         // println!("Interpreting {:?}", self);
         // println!("In the abstract state {}", state);
-        // a - b <= -1
-        let lhs = Box::new(Minus {
-            left: self.left.clone_box(),
-            right: self.right.clone_box(),
-        });
-        let rhs = Box::new(Numeral(-1));
-        let leq = Box::new(LessEqual {
-            left: lhs,
-            right: rhs,
-        });
-        let ret = leq.abs_evaluate(state, flag);
-        println!("less return state {}", ret);
-        ret
+        let zero_int = AbstractInterval::Bounded { lower: 0, upper: 0 };
+        if self.right.abs_evaluate(state) == zero_int {
+            let lhs = Box::new(Add {
+                left: self.left.clone_box(),
+                right: Box::new(Numeral(1)),
+            });
+            let rhs = Box::new(Numeral(0));
+            let canonical = Box::new(LessEqual {
+                left: lhs,
+                right: rhs,
+            });
+            canonical.abs_evaluate(state, flag)
+        } else {
+            let lhs = Box::new(Add {
+                left: Box::new(Minus {
+                    left: self.left.clone_box(),
+                    right: self.right.clone_box(),
+                }),
+                right: Box::new(Numeral(1)),
+            });
+            let rhs = Box::new(Numeral(0));
+            let canonical = Box::new(LessEqual {
+                left: lhs,
+                right: rhs,
+            });
+            canonical.abs_evaluate(state, flag)
+        }
     }
     fn to_string(&self) -> String {
         format!("{} < {}", self.left.to_string(), self.right.to_string())

@@ -27,7 +27,7 @@ impl AbstractDomainOps for AbstractInterval {
         self.int_narrowing(other)
     }
 
-    fn is_top(&self) -> bool {
+    fn _is_top(&self) -> bool {
         self._is_top()
     }
 
@@ -49,7 +49,22 @@ impl fmt::Display for AbstractInterval {
         match self {
             AbstractInterval::Bottom => write!(f, "Bottom ┴"),
             AbstractInterval::Top => write!(f, "Top ┬"),
-            AbstractInterval::Bounded { lower, upper } => write!(f, "[{}, {}]", lower, upper),
+            AbstractInterval::Bounded { lower, upper } => {
+                let m = *M.lock().expect("failed to lock m mutex");
+                let n = *N.lock().expect("failed to lock n mutex");
+                if *lower == m  && *upper != n{
+                    write!(f, "[-∞, {}]",  upper)
+                }
+                else if *upper == n && *lower !=m {
+                    write!(f, "[{}, +∞]", lower)
+                }
+                else if *upper == n && *lower == m{
+                    write!(f, "[-∞, +∞]")
+                }
+                else {
+                    write!(f, "[{}, {}]", lower, upper)
+                }
+            }
         }
     }
 }
@@ -327,15 +342,22 @@ impl Add for AbstractInterval {
                 } else {
                     let new_upper = checked_add(l1, l2);
                     let new_lower = checked_add(u1, u2);
-                    if new_upper == m && new_lower == m {
+                    if new_upper == n && new_lower == m {
                         return Self::Top;
                     }
-                    if new_upper == m || new_lower == n {
+                    if new_upper == n || new_lower == m {
                         Self::Bottom
                     } else {
-                        Self::Bounded {
-                            lower: new_lower,
-                            upper: new_upper,
+                        if new_lower > new_upper {
+                            Self::Bounded {
+                                lower: new_upper,
+                                upper: new_lower,
+                            }
+                        } else {
+                            Self::Bounded {
+                                lower: new_lower,
+                                upper: new_upper,
+                            }
                         }
                     }
                 }
@@ -349,17 +371,27 @@ fn checked_add(a: i64, b: i64) -> i64 {
     let n = *N.lock().unwrap();
     match a.checked_add(b) {
         Some(result) => {
+            println!("some case in check add");
             if n >= result {
                 if m <= result {
+                    println!("normal case {}", result);
                     return result;
                 }
+                println!("returning min in check add");
                 return m;
             }
+            println!("returning max in check add");
             return n;
             //result
         }
-        None if a > i64::zero() => n,
-        None => m,
+        None if a > i64::zero() => {
+            println!("none case returning max in check add");
+            n
+        }
+        None => {
+            println!("none case returning min in check add");
+            m
+        }
     }
 }
 
@@ -395,24 +427,6 @@ impl Sub for AbstractInterval {
                     // [a,b] [c,d] = [a-d, b-c]
                     let new_lower = checked_sub(l1, u2);
                     let new_upper = checked_sub(u1, l2);
-                    // let candidates = [
-                    //     checked_sub(l1, l2),
-                    //     checked_sub(l1, u2),
-                    //     checked_sub(u1, l2),
-                    //     checked_sub(u1, u2),
-                    // ];
-
-                    // let new_lower = candidates
-                    //     .iter()
-                    //     .filter_map(|&x| Some(x)) // Filtra i risultati validi
-                    //     .min() // Trova il valore minimo
-                    //     .unwrap_or(min_value()); // Se tutto fallisce, ritorna il valore minimo
-
-                    // let new_upper = candidates
-                    //     .iter()
-                    //     .filter_map(|&x| Some(x)) // Filtra i risultati validi
-                    //     .max() // Trova il valore massimo
-                    //     .unwrap_or(max_value()); // Se tutto fallisce, ritorna il valore massimo
                     println!("new upper in sub {}", new_upper);
                     println!("new lower in sub {}", new_lower);
 
@@ -425,9 +439,16 @@ impl Sub for AbstractInterval {
                         Self::Bottom
                     } else {
                         println!("returning bounded in sub");
-                        Self::Bounded {
-                            lower: new_lower,
-                            upper: new_upper,
+                        if new_lower > new_upper {
+                            Self::Bounded {
+                                lower: new_upper,
+                                upper: new_lower,
+                            }
+                        } else {
+                            Self::Bounded {
+                                lower: new_lower,
+                                upper: new_upper,
+                            }
                         }
                     }
                 }
@@ -678,6 +699,24 @@ impl Ord for AbstractInterval {
             // `Top` è sempre considerato più grande di qualsiasi altro intervallo
             (AbstractInterval::Top, _) => Ordering::Greater,
             (_, AbstractInterval::Top) => Ordering::Less,
+        }
+    }
+}
+impl From<i64> for AbstractInterval {
+    fn from(value: i64) -> Self {
+        // Esempio: crea un intervallo "singolo" o definisci la logica che preferisci
+        AbstractInterval::Bounded { lower: value, upper: value }
+    }
+}
+impl Zero for AbstractInterval {
+    fn zero() -> Self {
+        AbstractInterval::Bounded { lower: 0, upper: 0 }
+    }
+
+    fn is_zero(&self) -> bool {
+        match self {
+            AbstractInterval::Bounded { lower, upper } => *lower == 0 && *upper == 0,
+            _ => false,
         }
     }
 }

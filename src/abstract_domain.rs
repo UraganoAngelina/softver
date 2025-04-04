@@ -9,7 +9,7 @@ pub trait AbstractDomainOps {
     fn narrowing(&self, other: &Self) -> Self;
     fn glb(&self, other: &Self) -> Self;
     fn top() -> Self;
-    fn is_top(&self) -> bool;
+    fn _is_top(&self) -> bool;
     fn is_bottom(&self) -> bool;
 }
 #[derive(Debug, Clone, Copy)]
@@ -54,13 +54,13 @@ impl<Q: AbstractDomainOps> AbstractDomain<Q> {
     pub fn is_bottom(& self) -> bool {
         self.get_value().is_bottom()
     }
-    pub fn is_top(&self) -> bool {
-        self.get_value().is_top()
+    pub fn _is_top(&self) -> bool {
+        self.get_value()._is_top()
     }
 }
 
 impl<Q: Copy + Ord + From<i64> + PartialEq + Zero + Display> fmt::Display for AbstractDomain<Q> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " {{ {} }}", self.value.to_string())
+        write!(f, "  {} ", self.value.to_string())
     }
 }

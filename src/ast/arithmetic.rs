@@ -1,4 +1,4 @@
-use crate::abstract_domain::{self, AbstractDomain, AbstractDomainOps};
+use crate::abstract_domain::{AbstractDomain, AbstractDomainOps};
 use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::State;
@@ -379,8 +379,8 @@ impl ArithmeticExpression for PlusPlus {
             AbstractInterval::Bottom => AbstractInterval::Bottom,
             AbstractInterval::Top => AbstractInterval::Top,
             AbstractInterval::Bounded { lower, upper } => {
-                if upper <= n {
-                    if lower >= m {
+                if upper < n {
+                    if lower > m {
                         let newupper = upper + 1;
                         let new_interval = AbstractInterval::new(lower, newupper);
                         let new_value = AbstractDomain::new(new_interval);

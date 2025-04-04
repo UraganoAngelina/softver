@@ -1,0 +1,13 @@
+"filename", "language", "Rust", "comment", "blank", "total"
+"/home/alberto/Desktop/soft2ver/soft2ver/src/abstract_domain.rs", "Rust", 55, 4, 8, 67
+"/home/alberto/Desktop/soft2ver/soft2ver/src/abstract_interval.rs", "Rust", 606, 33, 45, 684
+"/home/alberto/Desktop/soft2ver/soft2ver/src/abstract_state.rs", "Rust", 221, 40, 29, 290
+"/home/alberto/Desktop/soft2ver/soft2ver/src/ast/arithmetic.rs", "Rust", 440, 40, 22, 502
+"/home/alberto/Desktop/soft2ver/soft2ver/src/ast/boolean.rs", "Rust", 648, 180, 41, 869
+"/home/alberto/Desktop/soft2ver/soft2ver/src/ast/mod.rs", "Rust", 5, 0, 2, 7
+"/home/alberto/Desktop/soft2ver/soft2ver/src/ast/statement.rs", "Rust", 399, 9, 40, 448
+"/home/alberto/Desktop/soft2ver/soft2ver/src/lexer.rs", "Rust", 256, 18, 27, 301
+"/home/alberto/Desktop/soft2ver/soft2ver/src/main.rs", "Rust", 123, 11, 16, 150
+"/home/alberto/Desktop/soft2ver/soft2ver/src/node.rs", "Rust", 38, 18, 5, 61
+"/home/alberto/Desktop/soft2ver/soft2ver/src/parser.rs", "Rust", 1740, 239, 176, 2155
+"Total", "-", 4531, 592, 411, 5534
