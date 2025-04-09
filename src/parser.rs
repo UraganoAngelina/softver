@@ -2146,8 +2146,8 @@ pub fn analyze(program: String) {
         println!("STARTING ABSTRACT SEMANTICS ANALYSIS");
         if let Some(last_node) = any_vec.nodes.last() {
             if let Some(statement) = last_node.as_statement() {
-                statement.abs_evaluate(&mut abs_state);
-                //println!("state printing after code evaluation {:#?}", new_state.clone());
+                let new_state= statement.abs_evaluate(&mut abs_state);
+                println!("state printing after code evaluation {}", new_state.clone());
             }
         }
     }

@@ -1,7 +1,7 @@
 use crate::abstract_domain::AbstractDomainOps;
-use crate::{abstract_interval::AbstractInterval, abstract_state::AbstractState};
 use crate::ast::arithmetic::ArithmeticExpression;
 use crate::ast::State;
+use crate::{abstract_interval::AbstractInterval, abstract_state::AbstractState};
 use std::fmt::Debug;
 
 use super::arithmetic::{Add, Minus, Numeral};
@@ -181,8 +181,11 @@ impl BooleanExpression for GreatEqual {
         }
 
         // b - a  <= 0
-        let lhs = Box::new(Minus{left: self.right.clone_box(), right: self.left.clone_box()});
-         
+        let lhs = Box::new(Minus {
+            left: self.right.clone_box(),
+            right: self.left.clone_box(),
+        });
+
         let rhs = Box::new(Numeral(0));
         let canonical = Box::new(LessEqual {
             left: lhs,
@@ -232,7 +235,8 @@ impl BooleanExpression for Great {
             left: lhs,
             right: rhs,
         });
-        canonical.abs_evaluate(state, flag)
+
+        canonical.abs_evaluate(state, false)
     }
     fn to_string(&self) -> String {
         format!("{} > {}", self.left.to_string(), self.right.to_string())
@@ -262,7 +266,12 @@ impl BooleanExpression for LessEqual {
         flag: bool,
     ) -> AbstractState<Self::Q> {
         if !flag {
-            println!("less equal normal eval in state {}", state);
+            println!(
+                "less equal {} <= {} normal eval in state {}",
+                self.left.to_string(),
+                self.right.to_string(),
+                state
+            );
             if self.left.abs_evaluate(state).is_bottom()
                 || self.right.abs_evaluate(state).is_bottom()
             {
@@ -271,10 +280,20 @@ impl BooleanExpression for LessEqual {
 
             let left_eval = self.left.abs_evaluate(state);
             let right_eval = self.right.abs_evaluate(state);
+            println!(
+                "evaluation lhs: {} rhs:{}",
+                left_eval.to_string(),
+                right_eval.to_string()
+            );
+            // let left_var = self.left.extract_variables();
+            //    for element in left_var {
+            //     state.update_interval(&element.value, left_eval);
+            //    }
 
             match (left_eval, right_eval) {
                 // Caso base: uno dei due è Bottom
                 (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
+                    println!("bottom case of leq");
                     AbstractState::bottom(state)
                 }
 
@@ -309,10 +328,13 @@ impl BooleanExpression for LessEqual {
                                     upper: u1,
                                 },
                             );
+                            println!(" leq result {}", state.clone());
                             state.clone()
                         } else {
                             // Non soddisfatto: Bottom
+
                             state.update_interval(&left_var.value, AbstractInterval::Bottom);
+                            println!(" leq result {}", state.clone());
                             AbstractState::bottom(state)
                         }
                     } else if let (Some(left_var), Some(_right_num)) = (
@@ -328,10 +350,12 @@ impl BooleanExpression for LessEqual {
                                     upper: std::cmp::min(u1, u2),
                                 },
                             );
+                            println!(" leq result {}", state.clone());
                             state.clone()
                         } else {
                             // Non soddisfatto: Bottom
                             state.update_interval(&left_var.value, AbstractInterval::Bottom);
+                            println!(" leq result {}", state.clone());
                             AbstractState::bottom(state)
                         }
                     } else {
@@ -339,18 +363,23 @@ impl BooleanExpression for LessEqual {
                         state.clone()
                     }
                 }
-                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => state.clone(),
+                (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => {
+                    println!(" top case res{}", state.clone());
+                    state.clone()
+                }
             }
         } else {
             println!("filtering with !guard in leq in state {}", state);
             if self.left.abs_evaluate(state).is_bottom()
                 || self.right.abs_evaluate(state).is_bottom()
             {
+                println!(" bottom case in leq negated");
                 AbstractState::bottom(state);
             }
             println!(
-                "lhs  rhs {:?} >= {:?} in final filtering",
-                self.left, self.right
+                "lhs  rhs {} >= {} in final filtering",
+                self.left.to_string(),
+                self.right.to_string()
             );
             if state.is_bottom() {
                 return AbstractState::bottom(&state);
@@ -451,36 +480,26 @@ impl BooleanExpression for And {
         flag: bool,
     ) -> AbstractState<Self::Q> {
         if !flag {
-            // Caso And: combinazione tramite glb (intersezione)
-            let mut fixpoint = false;
             let mut x = state.clone();
-            let mut j = 0;
-            while !fixpoint {
-                j += 1;
-                println!("j counter {}", j);
-                // Valutiamo le due sotto-espressioni con lo stato corrente x
-                let left_eval = self.left.abs_evaluate(&mut x, false);
-                let right_eval = self.right.abs_evaluate(&mut x, false);
-                // Combiniamo gli stati usando la funzione glb_var_wise (che fa l'intersezione variabile per variabile)
-                let current = left_eval.state_glb(&right_eval);
-                // Il fixpoint è raggiunto se lo stato non cambia oppure se si arriva a bottom
-                fixpoint = (current == x) || (current == AbstractState::bottom(state));
-                x = current;
+            let left_eval = self.left.abs_evaluate(&mut x, false);
+            let right_eval = self.right.abs_evaluate(&mut x, false);
+            if left_eval.is_bottom() || right_eval.is_bottom() {
+                return AbstractState::bottom(state);
             }
-            println!("state after and evaluation {}", x);
-            x
+            let current = left_eval.state_glb(&right_eval);
+            state.variables.extend(current.variables.clone());
+            current
         } else {
-            // Caso in cui flag è true: qui ipotizziamo l'uso di lub (unione) come nel tuo codice originale
-            let mut fixpoint = false;
             let mut x = state.clone();
-            while !fixpoint {
-                let left_eval = self.left.abs_evaluate(&mut x, false);
-                let right_eval = self.right.abs_evaluate(&mut x, false);
-                let current = left_eval.state_lub(&right_eval);
-                fixpoint = (current == x) || (current == AbstractState::bottom(state));
-                x = current;
+
+            let left_eval = self.left.abs_evaluate(&mut x, false);
+            let right_eval = self.right.abs_evaluate(&mut x, false);
+            if left_eval.is_bottom() || right_eval.is_bottom() {
+                return AbstractState::bottom(state);
             }
-            x
+            let current = left_eval.state_lub(&right_eval);
+            state.variables.extend(current.variables.clone());
+            current
         }
     }
     fn to_string(&self) -> String {
@@ -511,7 +530,6 @@ impl BooleanExpression for Or {
         flag: bool,
     ) -> AbstractState<Self::Q> {
         if !flag {
-            // Caso in cui flag è true: qui ipotizziamo l'uso di lub (unione) come nel tuo codice originale
             let left_eval = self.left.abs_evaluate(state, false);
             let right_eval = self.right.abs_evaluate(state, false);
             if left_eval.is_bottom() || right_eval.is_bottom() {
@@ -519,19 +537,16 @@ impl BooleanExpression for Or {
             }
             let ret = left_eval.state_lub(&right_eval);
 
-            println!("or return state {}", ret);
+            state.variables.extend(ret.variables.clone());
             ret
         } else {
-            // Valutiamo le due sotto-espressioni con lo stato corrente x
             let left_eval = self.left.abs_evaluate(state, false);
             let right_eval = self.right.abs_evaluate(state, false);
             if left_eval.is_bottom() || right_eval.is_bottom() {
                 return AbstractState::bottom(state);
             }
-            // Combiniamo gli stati usando la funzione glb_var_wise (che fa l'intersezione variabile per variabile)
             let ret = left_eval.state_glb(&right_eval);
-            // Il fixpoint è raggiunto se lo stato non cambia oppure se si arriva a bottom
-            println!("negated or return state {}", ret);
+            state.variables.extend(ret.variables.clone());
             ret
         }
     }
@@ -563,7 +578,8 @@ impl BooleanExpression for Not {
         if self.expression.abs_evaluate(state, flag).is_bottom() {
             AbstractState::bottom(state);
         }
-        let expr_eval = self.expression.abs_evaluate(state, false);
+        let myflag = !flag;
+        let expr_eval = self.expression.abs_evaluate(state, myflag);
         expr_eval
     }
 

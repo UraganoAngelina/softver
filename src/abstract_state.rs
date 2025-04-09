@@ -1,6 +1,12 @@
-use std::collections::HashMap;
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+};
 // use crate::abstract_interval::AbstractInterval;
-use crate::abstract_domain::{AbstractDomain, AbstractDomainOps};
+use crate::{
+    abstract_domain::{AbstractDomain, AbstractDomainOps, AbstractValue, ConcreteValue},
+    abstract_interval::AbstractInterval,
+};
 use std::fmt::{self, Debug};
 
 #[derive(Debug, PartialEq)]
@@ -29,8 +35,8 @@ where
             variables: HashMap::new(),
         }
     }
+    // Checks if the state contains a Top interval
     fn _is_top(&self) -> bool {
-        // Se ci sono variabili, verificare se una di esse è Top
         self.variables
             .values()
             .any(|interval| interval.value._is_top())
@@ -85,7 +91,7 @@ where
         // Restituisce lo stato aggiornato
         self.clone()
     }
-    // Least Upper Bound for states
+    // Least Upper Bound variable wise
     pub fn state_lub(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
         if self.is_bottom {
             return other.clone();
@@ -154,8 +160,7 @@ where
             variables: new_variables,
         }
     }
-
-    // Widening operator for states
+    // Widening operator variable wise
     pub fn state_widening(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
         // Se uno dei due stati è Bottom, ritorna l'altro stato
         if self.is_bottom {
@@ -209,7 +214,7 @@ where
             .expect("error in the lookup state function");
         res
     }
-    // Narrowing operator for states
+    // Narrowing operator variable wise
     pub fn state_narrowing(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
         if self.is_bottom {
             return other.clone();
@@ -218,12 +223,6 @@ where
             return self.clone();
         }
 
-        // if self.is_top() || other.is_top() {
-        //     return AbstractState {
-        //         is_bottom: false,
-        //         variables: HashMap::new(),
-        //     };
-        // }
         let mut new_variables: HashMap<String, AbstractDomain<Q>> = HashMap::new();
 
         for (key, left_interval) in &self.variables {
@@ -250,16 +249,34 @@ where
         };
         newstate
     }
+    // Concretization function variable wise
+    pub fn _state_gamma(&self) -> HashSet<ConcreteValue> {
+        if self.is_bottom() {
+            return HashSet::new();
+        }
+        let mut result = HashSet::new();
+
+        for element in self.variables.values() {
+            result.extend(element._gamma());
+        }
+        result
+    }
+    // Abstraction function variable wise
+    pub fn _state_alpha(r: HashSet<ConcreteValue>) -> HashSet<AbstractValue> {
+        <AbstractInterval as AbstractDomainOps>::_alpha(r)
+    }
 }
 
 impl<Q> fmt::Display for AbstractState<Q>
 where
-    Q: AbstractDomainOps + Clone + fmt::Display
-    + Copy         
-    + Ord          
-    + From<i64>    
-    + num_traits::Zero  
-    + fmt::Display, 
+    Q: AbstractDomainOps
+        + Clone
+        + fmt::Display
+        + Copy
+        + Ord
+        + From<i64>
+        + num_traits::Zero
+        + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // println!("state flag: {}", self.is_bottom );
@@ -289,6 +306,54 @@ where
         Self {
             is_bottom: self.is_bottom,
             variables: self.variables.clone(),
+        }
+    }
+}
+// partial order implementation variable wise
+impl<Q: AbstractDomainOps + Clone + PartialOrd + PartialEq> PartialOrd for AbstractState<Q> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // Bottom case
+        if self.is_bottom() && other.is_bottom() {
+            return Some(Ordering::Equal);
+        }
+        if self.is_bottom() {
+            return Some(Ordering::Less);
+        }
+        if other.is_bottom() {
+            return Some(Ordering::Greater);
+        }
+
+        let keys: HashSet<&String> = self
+            .variables
+            .keys()
+            .chain(other.variables.keys())
+            .collect();
+
+        let mut all_leq = true;
+        let mut all_geq = true;
+
+        for key in keys {
+            match (self.variables.get(key), other.variables.get(key)) {
+                (Some(self_dom), Some(other_dom)) => {
+                    if self_dom.value > other_dom.value {
+                        all_leq = false;
+                    }
+                    if self_dom.value < other_dom.value {
+                        all_geq = false;
+                    }
+                }
+                _ => return None,
+            }
+        }
+
+        if all_leq && all_geq {
+            Some(Ordering::Equal)
+        } else if all_leq {
+            Some(Ordering::Less)
+        } else if all_geq {
+            Some(Ordering::Greater)
+        } else {
+            None
         }
     }
 }

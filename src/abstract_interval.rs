@@ -1,13 +1,14 @@
 use num_traits::Zero;
 use std::cmp::{Ordering, PartialOrd};
+use std::collections::HashSet;
 use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
-use crate::abstract_domain::AbstractDomainOps;
+use crate::abstract_domain::{AbstractDomainOps, AbstractValue, ConcreteValue};
 use crate::N;
 use crate::{find_max, find_min, CONSTANTS_VECTOR, M};
 
-#[derive(Debug, Clone, Copy, Eq)]
+#[derive(Debug, Clone, Copy, Eq, Hash)]
 pub enum AbstractInterval {
     Bottom,                             // Stuck configuration
     Top,                                // Lack of information
@@ -42,6 +43,17 @@ impl AbstractDomainOps for AbstractInterval {
     fn top() -> Self {
         AbstractInterval::top()
     }
+
+    fn _gamma(abstract_val: &Self) -> HashSet<ConcreteValue> {
+        abstract_val._gamma()
+    }
+
+    fn _alpha(r: HashSet<ConcreteValue>) -> HashSet<AbstractValue> {
+        if r.is_empty() {
+            return HashSet::new();
+        }
+        r.into_iter().map(|c| AbstractInterval::alpha(c)).collect()
+    }
 }
 
 impl fmt::Display for AbstractInterval {
@@ -52,16 +64,13 @@ impl fmt::Display for AbstractInterval {
             AbstractInterval::Bounded { lower, upper } => {
                 let m = *M.lock().expect("failed to lock m mutex");
                 let n = *N.lock().expect("failed to lock n mutex");
-                if *lower == m  && *upper != n{
-                    write!(f, "[-∞, {}]",  upper)
-                }
-                else if *upper == n && *lower !=m {
+                if *lower == m && *upper != n {
+                    write!(f, "[-∞, {}]", upper)
+                } else if *upper == n && *lower != m {
                     write!(f, "[{}, +∞]", lower)
-                }
-                else if *upper == n && *lower == m{
+                } else if *upper == n && *lower == m {
                     write!(f, "[-∞, +∞]")
-                }
-                else {
+                } else {
                     write!(f, "[{}, {}]", lower, upper)
                 }
             }
@@ -78,7 +87,27 @@ impl AbstractInterval {
             Self::Bounded { lower, upper }
         }
     }
-
+    pub fn alpha(c: ConcreteValue) -> AbstractValue {
+        AbstractValue {
+            value: AbstractInterval::Bounded {
+                lower: c.value,
+                upper: c.value,
+            },
+        }
+    }
+    pub fn _gamma(&self) -> HashSet<ConcreteValue> {
+        let m_val = *M.lock().expect("Failed to lock M");
+        let n_val = *N.lock().expect("Failed to lock N");
+        match self {
+            AbstractInterval::Bottom => HashSet::new(), // Empty Set
+            AbstractInterval::Top => (m_val..=n_val)
+                .map(|v| ConcreteValue { value: v }) // Whole Domain Set
+                .collect(),
+            AbstractInterval::Bounded { lower, upper } => (*lower..=*upper)
+                .map(|v| ConcreteValue { value: v })
+                .collect(),
+        }
+    }
     /// Interval Least Upper Bound
     pub fn int_lub(&self, other: &Self) -> Self {
         match (self, other) {
@@ -104,9 +133,15 @@ impl AbstractInterval {
                         upper: new_upper,
                     }
                 } else {
-                    Self::Bounded {
-                        lower: *l1.min(l2),
-                        upper: *u1.max(u2),
+                    let new_lower = *l1.min(l2);
+                    let new_upper = *u1.max(u2);
+                    if new_lower <= new_upper {
+                        Self::Bounded {
+                            lower: new_lower,
+                            upper: new_upper,
+                        }
+                    } else {
+                        Self::Bottom
                     }
                 }
             }
@@ -345,19 +380,18 @@ impl Add for AbstractInterval {
                     if new_upper == n && new_lower == m {
                         return Self::Top;
                     }
-                    if new_upper == n || new_lower == m {
-                        Self::Bottom
+                    // if new_upper == n || new_lower == m {
+                    //     Self::Bottom
+                    // } else {
+                    if new_lower > new_upper {
+                        Self::Bounded {
+                            lower: new_upper,
+                            upper: new_lower,
+                        }
                     } else {
-                        if new_lower > new_upper {
-                            Self::Bounded {
-                                lower: new_upper,
-                                upper: new_lower,
-                            }
-                        } else {
-                            Self::Bounded {
-                                lower: new_lower,
-                                upper: new_upper,
-                            }
+                        Self::Bounded {
+                            lower: new_lower,
+                            upper: new_upper,
                         }
                     }
                 }
@@ -425,6 +459,10 @@ impl Sub for AbstractInterval {
                 } else {
                     println!("normal form of analysis");
                     // [a,b] [c,d] = [a-d, b-c]
+                    let l1_pre = l1.clone();
+                    let l2_pre = l2.clone();
+                    let u1_pre = u1.clone();
+                    let u2_pre = u2.clone();
                     let new_lower = checked_sub(l1, u2);
                     let new_upper = checked_sub(u1, l2);
                     println!("new upper in sub {}", new_upper);
@@ -434,9 +472,25 @@ impl Sub for AbstractInterval {
                         println!("returning top in sub");
                         return Self::Top;
                     }
-                    if new_upper == n || new_lower == m {
-                        println!("returning bottom in sub");
-                        Self::Bottom
+
+                    if l1_pre == m || l2_pre == m && u1_pre == n || u2_pre == n {
+                        if new_upper == n || new_lower == m {
+                            println!("returning bottom in sub");
+                            Self::Bottom
+                        } else {
+                            println!("returning bounded in sub");
+                            if new_lower > new_upper {
+                                Self::Bounded {
+                                    lower: new_upper,
+                                    upper: new_lower,
+                                }
+                            } else {
+                                Self::Bounded {
+                                    lower: new_lower,
+                                    upper: new_upper,
+                                }
+                            }
+                        }
                     } else {
                         println!("returning bounded in sub");
                         if new_lower > new_upper {
@@ -704,8 +758,10 @@ impl Ord for AbstractInterval {
 }
 impl From<i64> for AbstractInterval {
     fn from(value: i64) -> Self {
-        // Esempio: crea un intervallo "singolo" o definisci la logica che preferisci
-        AbstractInterval::Bounded { lower: value, upper: value }
+        AbstractInterval::Bounded {
+            lower: value,
+            upper: value,
+        }
     }
 }
 impl Zero for AbstractInterval {
