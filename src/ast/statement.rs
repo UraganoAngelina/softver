@@ -2,12 +2,12 @@ use crate::abstract_domain::{AbstractDomain, AbstractDomainOps};
 use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::{arithmetic::*, boolean::*, State};
-use crate::{ NARROWING_FLAG, WIDENING_FLAG};
+use crate::{NARROWING_FLAG, WIDENING_FLAG};
 use std::fmt::Debug;
 
 pub trait Statement: Debug {
-    type Q: AbstractDomainOps + PartialEq + Clone+ Debug;
-    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>>;
+    type Q: AbstractDomainOps + PartialEq + Clone + Debug;
+    fn clone_box(&self) -> Box<dyn Statement<Q = Self::Q>>;
     fn evaluate(&self, state: &mut State) -> State;
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q>;
     fn to_string(&self) -> String;
@@ -15,13 +15,13 @@ pub trait Statement: Debug {
 
 #[derive(Debug)]
 pub struct Assign {
-    pub var_name: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
-    pub expr: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
+    pub var_name: Box<dyn ArithmeticExpression<Q = AbstractInterval>>,
+    pub expr: Box<dyn ArithmeticExpression<Q = AbstractInterval>>,
 }
 
 impl Statement for Assign {
     type Q = AbstractInterval;
-    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
+    fn clone_box(&self) -> Box<dyn Statement<Q = Self::Q>> {
         Box::new(Assign {
             var_name: self.var_name.clone_box(),
             expr: self.expr.clone_box(),
@@ -36,16 +36,18 @@ impl Statement for Assign {
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
         let mut new_state = state.clone();
         let value = self.expr.abs_evaluate(&mut new_state);
-        println!("assignment for variable {:?}  rhs {:?} evaluation {} in state {}", self.var_name, self.expr,value, new_state);
-            state.variables.insert(
-                self.var_name.as_variable().unwrap().to_string(),
-                AbstractDomain::new(value),
-            );
-            println!("state after assingment {}", state);
-            state.is_bottom= new_state.is_bottom;
-            println!("flag after assignment {}", state.is_bottom);
-            state.clone()
-        
+        println!(
+            "assignment for variable {:?}  rhs {:?} evaluation {} in state {}",
+            self.var_name, self.expr, value, new_state
+        );
+        state.variables.insert(
+            self.var_name.as_variable().unwrap().to_string(),
+            AbstractDomain::new(value),
+        );
+        println!("state after assingment {}", state);
+        state.is_bottom = new_state.is_bottom;
+        println!("flag after assignment {}", state.is_bottom);
+        state.clone()
     }
     fn to_string(&self) -> String {
         format!("{} := {}", self.var_name.to_string(), self.expr.to_string())
@@ -57,7 +59,7 @@ pub struct Skip;
 
 impl Statement for Skip {
     type Q = AbstractInterval;
-    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
+    fn clone_box(&self) -> Box<dyn Statement<Q = Self::Q>> {
         Box::new(Skip {})
     }
 
@@ -74,13 +76,13 @@ impl Statement for Skip {
 
 #[derive(Debug)]
 pub struct Concat {
-    pub first: Box<dyn Statement<Q=AbstractInterval>>,
-    pub second: Box<dyn Statement<Q=AbstractInterval>>,
+    pub first: Box<dyn Statement<Q = AbstractInterval>>,
+    pub second: Box<dyn Statement<Q = AbstractInterval>>,
 }
 
 impl Statement for Concat {
     type Q = AbstractInterval;
-    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
+    fn clone_box(&self) -> Box<dyn Statement<Q = Self::Q>> {
         Box::new(Concat {
             first: self.first.clone_box(),
             second: self.second.clone_box(),
@@ -93,14 +95,12 @@ impl Statement for Concat {
         state_after_second
     }
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
-            let new_state = self
+        let new_state = self
             .second
             .abs_evaluate(&mut self.first.abs_evaluate(state));
-        state.is_bottom= new_state.is_bottom;
+        state.is_bottom = new_state.is_bottom;
         state.variables.extend(new_state.variables.clone());
         new_state
-        
-        
     }
     fn to_string(&self) -> String {
         format!("{} ; {}", self.first.to_string(), self.second.to_string())
@@ -109,14 +109,14 @@ impl Statement for Concat {
 
 #[derive(Debug)]
 pub struct IfThenElse {
-    pub guard: Box<dyn BooleanExpression<Q=AbstractInterval>>,
-    pub true_expr: Box<dyn Statement<Q=AbstractInterval>>,
-    pub false_expr: Box<dyn Statement<Q=AbstractInterval>>,
+    pub guard: Box<dyn BooleanExpression<Q = AbstractInterval>>,
+    pub true_expr: Box<dyn Statement<Q = AbstractInterval>>,
+    pub false_expr: Box<dyn Statement<Q = AbstractInterval>>,
 }
 
 impl Statement for IfThenElse {
     type Q = AbstractInterval;
-    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
+    fn clone_box(&self) -> Box<dyn Statement<Q = Self::Q>> {
         Box::new(IfThenElse {
             guard: self.guard.clone_box(),
             true_expr: self.true_expr.clone_box(),
@@ -148,7 +148,7 @@ impl Statement for IfThenElse {
         println!("else state {}", else_state);
         let final_state = AbstractState::state_lub(&then_state, &else_state);
         println!("state lub {}", final_state);
-        state.is_bottom= final_state.is_bottom;
+        state.is_bottom = final_state.is_bottom;
         state.variables.extend(final_state.variables.clone());
         println!("REAL STATE AFTER IF {}", state);
         state.clone()
@@ -165,13 +165,13 @@ impl Statement for IfThenElse {
 
 #[derive(Debug)]
 pub struct While {
-    pub guard: Box<dyn BooleanExpression<Q=AbstractInterval>>,
-    pub body: Box<dyn Statement<Q=AbstractInterval>>,
+    pub guard: Box<dyn BooleanExpression<Q = AbstractInterval>>,
+    pub body: Box<dyn Statement<Q = AbstractInterval>>,
 }
 
 impl Statement for While {
     type Q = AbstractInterval;
-    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
+    fn clone_box(&self) -> Box<dyn Statement<Q = Self::Q>> {
         Box::new(While {
             guard: self.guard.clone_box(),
             body: self.body.clone_box(),
@@ -222,7 +222,10 @@ impl Statement for While {
                 current_state = _prev_state.state_widening(&_body_result.clone());
             }
             // Fixpoint check
-            println!("WIDENING prev state {}   current state {}", _prev_state ,current_state);
+            println!(
+                "WIDENING prev state {}   current state {}",
+                _prev_state, current_state
+            );
             if current_state.clone() == _prev_state.clone() {
                 break;
             }
@@ -239,12 +242,15 @@ impl Statement for While {
                 println!("guard result {}", _guard_result);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
                 println!("body result {}", _body_result);
-                
-                 _body_result = precondition.state_lub(&_body_result.clone());
-                 println!("lub result {}", _body_result);
-                 
+
+                _body_result = precondition.state_lub(&_body_result.clone());
+                println!("lub result {}", _body_result);
+
                 current_state = _prev_state.clone().state_narrowing(&_body_result.clone());
-                println!("NARROWING prev state {}   current state {}", _prev_state ,current_state);
+                println!(
+                    "NARROWING prev state {}   current state {}",
+                    _prev_state, current_state
+                );
                 if current_state.clone() == _prev_state.clone() {
                     break;
                 }
@@ -253,14 +259,14 @@ impl Statement for While {
         }
         // filtering with !guard
         // println!("guard in while {}", self.guard.to_string());
-        let  postcondition =self.guard.abs_evaluate(&mut current_state.clone(), true);
+        let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
         // if postcondition == precondition{
         //     // println!("should I place bottom? ");
         //     postcondition.is_bottom = true;
         //     state.is_bottom= true;
         // }
         state.variables.extend(postcondition.variables.clone());
-      
+
         println!("CYCLE POSTCONDITION: {}", postcondition);
         postcondition
     }
@@ -276,15 +282,15 @@ impl Statement for While {
 
 #[derive(Debug)]
 pub struct For {
-    pub init: Box<dyn Statement<Q=AbstractInterval>>,
-    pub guard: Box<dyn BooleanExpression<Q=AbstractInterval>>,
-    pub increment: Box<dyn ArithmeticExpression<Q=AbstractInterval>>,
-    pub body: Box<dyn Statement<Q=AbstractInterval>>,
+    pub init: Box<dyn Statement<Q = AbstractInterval>>,
+    pub guard: Box<dyn BooleanExpression<Q = AbstractInterval>>,
+    pub increment: Box<dyn ArithmeticExpression<Q = AbstractInterval>>,
+    pub body: Box<dyn Statement<Q = AbstractInterval>>,
 }
 
 impl Statement for For {
     type Q = AbstractInterval;
-    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
+    fn clone_box(&self) -> Box<dyn Statement<Q = Self::Q>> {
         Box::new(For {
             init: self.init.clone_box(),
             guard: self.guard.clone_box(),
@@ -349,23 +355,25 @@ impl Statement for For {
             _prev_state = current_state.clone();
         }
         println!("CYCLE INVARIANT {}", current_state);
-        _prev_state = precondition.clone();
-        
-            loop {
-                _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
-                _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-                _body_result = _prev_state.state_lub(&_body_result.clone());
-                _increment_result = self.increment.abs_evaluate(&mut _body_result);
-                if *narrow == true {current_state = current_state.state_narrowing(&_body_result.clone());}
-                if current_state == _prev_state {
-                    break;
-                }
-                _prev_state = current_state.clone();
+        _prev_state = current_state.clone();
+
+        loop {
+            _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
+            _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
+            _body_result = precondition.state_lub(&_body_result.clone());
+            _increment_result = self.increment.abs_evaluate(&mut _body_result);
+            if *narrow == true {
+                current_state = _prev_state.clone().state_narrowing(&_body_result.clone());
             }
-        
+            if current_state == _prev_state {
+                break;
+            }
+            _prev_state = current_state.clone();
+        }
         // filtering with !guard
         let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
-        state.is_bottom= postcondition.is_bottom;
+        state.is_bottom = postcondition.is_bottom;
+        state.variables.extend(postcondition.variables.clone());
         println!("CYCLE POSTCONDITION: {}", postcondition);
         state.clone()
     }
@@ -383,13 +391,13 @@ impl Statement for For {
 
 #[derive(Debug)]
 pub struct RepeatUntil {
-    pub body: Box<dyn Statement<Q=AbstractInterval>>,
-    pub guard: Box<dyn BooleanExpression<Q=AbstractInterval>>,
+    pub body: Box<dyn Statement<Q = AbstractInterval>>,
+    pub guard: Box<dyn BooleanExpression<Q = AbstractInterval>>,
 }
 
 impl Statement for RepeatUntil {
     type Q = AbstractInterval;
-    fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>> {
+    fn clone_box(&self) -> Box<dyn Statement<Q = Self::Q>> {
         Box::new(RepeatUntil {
             body: self.body.clone_box(),
             guard: self.guard.clone_box(),
@@ -443,13 +451,13 @@ impl Statement for RepeatUntil {
             }
         }
         println!("CYCLE INVARIANT: {}", current_state);
-        prev_state = precondition.clone();
+        prev_state = current_state.clone();
         if *narrow == true {
             loop {
                 _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-                _body_result = prev_state.state_lub(&_body_result.clone());
-                current_state = current_state.state_narrowing(&_body_result.clone());
+                _body_result = precondition.state_lub(&_body_result.clone());
+                current_state = prev_state.state_narrowing(&_body_result.clone());
                 if current_state == prev_state {
                     break;
                 }
@@ -458,7 +466,7 @@ impl Statement for RepeatUntil {
         }
         // filtering with !guard
         let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
-        state.is_bottom= postcondition.is_bottom;
+        state.is_bottom = postcondition.is_bottom;
         state.variables.extend(postcondition.variables.clone());
         println!("CYCLE POSTCONDITION: {}", postcondition);
         state.clone()

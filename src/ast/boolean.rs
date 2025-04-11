@@ -523,7 +523,7 @@ impl BooleanExpression for LessEqual {
                 AbstractState::bottom(state);
             }
             println!(
-                "lhs  rhs {} >= {} in final filtering",
+                "lhs  rhs {} > {} in final filtering",
                 self.left.to_string(),
                 self.right.to_string()
             );
