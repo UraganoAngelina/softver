@@ -4,6 +4,7 @@ use crate::abstract_state::AbstractState;
 use crate::ast::{arithmetic::*, boolean::*, State};
 use crate::{ NARROWING_FLAG, WIDENING_FLAG};
 use std::fmt::Debug;
+
 pub trait Statement: Debug {
     type Q: AbstractDomainOps + PartialEq + Clone+ Debug;
     fn clone_box(&self) -> Box<dyn Statement<Q=Self::Q>>;
@@ -41,6 +42,8 @@ impl Statement for Assign {
                 AbstractDomain::new(value),
             );
             println!("state after assingment {}", state);
+            state.is_bottom= new_state.is_bottom;
+            println!("flag after assignment {}", state.is_bottom);
             state.clone()
         
     }
@@ -210,29 +213,38 @@ impl Statement for While {
         let mut current_state = state.clone();
         loop {
             _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
+            println!("guard result {}", _guard_result);
             _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
+            println!("body result {}", _body_result);
             _body_result = _prev_state.state_lub(&_body_result.clone());
+            println!(" lub {}", _body_result);
             if *wid == true {
                 current_state = _prev_state.state_widening(&_body_result.clone());
             }
             // Fixpoint check
+            println!("WIDENING prev state {}   current state {}", _prev_state ,current_state);
             if current_state.clone() == _prev_state.clone() {
                 break;
             }
             _prev_state = current_state.clone();
         }
-        let  invariant = current_state.clone();
+        let invariant = current_state.clone();
+        // invariant.is_bottom = current_state.is_bottom;
         println!("CYCLE INVARIANT: {}", invariant);
-        _prev_state = precondition.clone();
+        _prev_state = invariant.clone();
         if *narrow == true {
             loop {
                 println!("NARROWING PHASE, current state {}", current_state);
                 _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
                 println!("guard result {}", _guard_result);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-                 _body_result = _prev_state.state_lub(&_body_result.clone());
-                current_state = current_state.clone().state_narrowing(&_body_result.clone());
-                println!("prev state {}   current state {}", _prev_state ,current_state);
+                println!("body result {}", _body_result);
+                
+                 _body_result = precondition.state_lub(&_body_result.clone());
+                 println!("lub result {}", _body_result);
+                 
+                current_state = _prev_state.clone().state_narrowing(&_body_result.clone());
+                println!("NARROWING prev state {}   current state {}", _prev_state ,current_state);
                 if current_state.clone() == _prev_state.clone() {
                     break;
                 }
@@ -240,13 +252,13 @@ impl Statement for While {
             }
         }
         // filtering with !guard
-        println!("guard in while {}", self.guard.to_string());
-        let mut postcondition =self.guard.abs_evaluate(&mut current_state.clone(), true);
-        if postcondition == precondition{
-            // println!("should I place bottom? ");
-            postcondition.is_bottom = true;
-            state.is_bottom= true;
-        }
+        // println!("guard in while {}", self.guard.to_string());
+        let  postcondition =self.guard.abs_evaluate(&mut current_state.clone(), true);
+        // if postcondition == precondition{
+        //     // println!("should I place bottom? ");
+        //     postcondition.is_bottom = true;
+        //     state.is_bottom= true;
+        // }
         state.variables.extend(postcondition.variables.clone());
       
         println!("CYCLE POSTCONDITION: {}", postcondition);
@@ -312,6 +324,7 @@ impl Statement for For {
             .expect("failed to read narrowing flag in for loop");
         let precondition = state.clone();
         println!("PRECONDITION {}", precondition);
+        println!("init component {}", self.init.to_string());
         self.init.abs_evaluate(&mut state.clone());
         let mut _guard_result = AbstractState::new();
         let mut _body_result = AbstractState::new();
@@ -319,8 +332,6 @@ impl Statement for For {
         let mut current_state = state.clone();
         let mut _increment_result = AbstractInterval::new(0 as i64, 0 as i64);
         loop {
-            _prev_state = current_state.clone();
-
             _guard_result = self.guard.abs_evaluate(&mut _prev_state.clone(), false);
 
             _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
@@ -335,6 +346,7 @@ impl Statement for For {
             if current_state == _prev_state {
                 break;
             }
+            _prev_state = current_state.clone();
         }
         println!("CYCLE INVARIANT {}", current_state);
         _prev_state = precondition.clone();
@@ -342,7 +354,7 @@ impl Statement for For {
             loop {
                 _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-                _body_result = _prev_state.state_glb(&_body_result.clone());
+                _body_result = _prev_state.state_lub(&_body_result.clone());
                 _increment_result = self.increment.abs_evaluate(&mut _body_result);
                 if *narrow == true {current_state = current_state.state_narrowing(&_body_result.clone());}
                 if current_state == _prev_state {

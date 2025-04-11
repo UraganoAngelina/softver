@@ -133,8 +133,8 @@ pub fn find_max(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
     }
 }
 pub fn find_min(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
-    println!("sup search for value {} ", value);
-    println!("Vec content: {:?}", *vec);
+    // println!("sup search for value {} ", value);
+    // println!("Vec content: {:?}", *vec);
     
     // Cerca il massimo valore minore o uguale a value
     if let Some(max_val) = vec.iter()

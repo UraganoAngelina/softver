@@ -375,23 +375,34 @@ impl Add for AbstractInterval {
                         upper: new_upper,
                     }
                 } else {
+                    // let l1_pre = l1.clone();
+                    // let l2_pre = l2.clone();
+                    // let u1_pre = u1.clone();
+                    // let u2_pre = u2.clone();
                     let new_upper = checked_add(l1, l2);
                     let new_lower = checked_add(u1, u2);
+
+                    // println!("ol1: {}",l1_pre);
+                    // println!("ou1: {}",u1_pre);
+                    // println!("ol2: {}",l2_pre);
+                    // println!("ou2: {}",u2_pre);
+                    // println!("nl: {}",new_lower);
+                    // println!("nu:{}", new_upper);
+
                     if new_upper == n && new_lower == m {
                         return Self::Top;
                     }
-                    // if new_upper == n || new_lower == m {
-                    //     Self::Bottom
-                    // } else {
-                    if new_lower > new_upper {
-                        Self::Bounded {
-                            lower: new_upper,
-                            upper: new_lower,
-                        }
-                    } else {
-                        Self::Bounded {
-                            lower: new_lower,
-                            upper: new_upper,
+                    else {
+                        if new_lower > new_upper {
+                            Self::Bounded {
+                                lower: new_upper,
+                                upper: new_lower,
+                            }
+                        } else {
+                            Self::Bounded {
+                                lower: new_lower,
+                                upper: new_upper,
+                            }
                         }
                     }
                 }
@@ -405,25 +416,25 @@ fn checked_add(a: i64, b: i64) -> i64 {
     let n = *N.lock().unwrap();
     match a.checked_add(b) {
         Some(result) => {
-            println!("some case in check add");
+            //println!("some case in check add");
             if n >= result {
                 if m <= result {
-                    println!("normal case {}", result);
+                    //println!("normal case {}", result);
                     return result;
                 }
-                println!("returning min in check add");
+                //println!("returning min in check add");
                 return m;
             }
-            println!("returning max in check add");
+            //println!("returning max in check add");
             return n;
             //result
         }
         None if a > i64::zero() => {
-            println!("none case returning max in check add");
+            //println!("none case returning max in check add");
             n
         }
         None => {
-            println!("none case returning min in check add");
+            // println!("none case returning min in check add");
             m
         }
     }
@@ -433,7 +444,7 @@ impl Sub for AbstractInterval {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
-        println!("sub function call");
+        // println!("sub function call");
         match (self, other) {
             (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom,
             (Self::Top, _) | (_, Self::Top) => Self::Top,
@@ -457,52 +468,42 @@ impl Sub for AbstractInterval {
                         upper: new_upper,
                     }
                 } else {
-                    println!("normal form of analysis");
+                    // println!("normal form of analysis");
                     // [a,b] [c,d] = [a-d, b-c]
-                    let l1_pre = l1.clone();
-                    let l2_pre = l2.clone();
-                    let u1_pre = u1.clone();
-                    let u2_pre = u2.clone();
+                    // let l1_pre = l1.clone();
+                    // let l2_pre = l2.clone();
+                    // let u1_pre = u1.clone();
+                    // let u2_pre = u2.clone();
                     let new_lower = checked_sub(l1, u2);
                     let new_upper = checked_sub(u1, l2);
-                    println!("new upper in sub {}", new_upper);
-                    println!("new lower in sub {}", new_lower);
+                    // println!("new upper in sub {}", new_upper);
+                    // println!("new lower in sub {}", new_lower);
 
                     if new_upper == n && new_lower == m {
-                        println!("returning top in sub");
+                        //println!("returning top in sub");
                         return Self::Top;
                     }
+                    // println!("ol1: {}", l1_pre);
+                    // println!("ou1: {}", u1_pre);
+                    // println!("ol2: {}", l2_pre);
+                    // println!("ou2: {}", u2_pre);
+                    // println!("nl: {}", new_lower);
+                    // println!("nu:{}", new_upper);
 
-                    if l1_pre == m || l2_pre == m && u1_pre == n || u2_pre == n {
-                        if new_upper == n || new_lower == m {
-                            println!("returning bottom in sub");
-                            Self::Bottom
-                        } else {
-                            println!("returning bounded in sub");
-                            if new_lower > new_upper {
-                                Self::Bounded {
-                                    lower: new_upper,
-                                    upper: new_lower,
-                                }
-                            } else {
-                                Self::Bounded {
-                                    lower: new_lower,
-                                    upper: new_upper,
-                                }
-                            }
+                    // if new_upper == n || new_lower == m {
+                    //     //println!("returning bottom in sub");
+                    //     Self::Bottom
+
+                    // println!("returning bounded in sub");
+                    if new_lower > new_upper {
+                        Self::Bounded {
+                            lower: new_upper,
+                            upper: new_lower,
                         }
                     } else {
-                        println!("returning bounded in sub");
-                        if new_lower > new_upper {
-                            Self::Bounded {
-                                lower: new_upper,
-                                upper: new_lower,
-                            }
-                        } else {
-                            Self::Bounded {
-                                lower: new_lower,
-                                upper: new_upper,
-                            }
+                        Self::Bounded {
+                            lower: new_lower,
+                            upper: new_upper,
                         }
                     }
                 }
@@ -512,29 +513,29 @@ impl Sub for AbstractInterval {
 }
 
 fn checked_sub(a: i64, b: i64) -> i64 {
-    println!("check sub function call");
+    //println!("check sub function call");
     let m = *M.lock().unwrap();
     let n = *N.lock().unwrap();
     match a.checked_sub(b) {
         Some(result) => {
-            println!("Some case in check sub");
+            //println!("Some case in check sub");
             if n >= result {
                 if m <= result {
-                    println!("normal case {}", result);
+                    // println!("normal case {}", result);
                     return result;
                 }
-                println!("returning min");
+                //println!("returning min");
                 return m;
             }
-            println!("returning max");
+            //println!("returning max");
             return n;
         }
         None if a > i64::zero() => {
-            println!("none case returnin max");
+            //println!("none case returnin max");
             n
         }
         None => {
-            println!("none case returning min");
+            //println!("none case returning min");
             m
         }
     }

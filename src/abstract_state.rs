@@ -93,12 +93,20 @@ where
     }
     // Least Upper Bound variable wise
     pub fn state_lub(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
-        if self.is_bottom {
+        
+        let self_flag= self.is_bottom();
+        let other_flag = other.is_bottom();
+        println!("flags in lub {} {}", self_flag, other_flag);
+        if self.is_bottom() & other.is_bottom(){
+            println!("ohhh salve");
+        }
+        if self.is_bottom() {
             return other.clone();
         }
-        if other.is_bottom {
+        if other.is_bottom() {
             return self.clone();
         }
+        
 
         let mut new_variables: HashMap<String, AbstractDomain<Q>> = HashMap::new();
 
@@ -127,10 +135,10 @@ where
         }
     }
     pub fn state_glb(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
-        if self.is_bottom {
+        if self.is_bottom (){
             return other.clone();
         }
-        if other.is_bottom {
+        if other.is_bottom (){
             return self.clone();
         }
 
@@ -163,10 +171,10 @@ where
     // Widening operator variable wise
     pub fn state_widening(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
         // Se uno dei due stati è Bottom, ritorna l'altro stato
-        if self.is_bottom {
+        if self.is_bottom() {
             return other.clone();
         }
-        if other.is_bottom {
+        if other.is_bottom() {
             return self.clone();
         }
 
@@ -216,10 +224,10 @@ where
     }
     // Narrowing operator variable wise
     pub fn state_narrowing(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
-        if self.is_bottom {
+        if self.is_bottom() {
             return other.clone();
         }
-        if other.is_bottom {
+        if other.is_bottom() {
             return self.clone();
         }
 
@@ -304,7 +312,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            is_bottom: self.is_bottom,
+            is_bottom: self.is_bottom.clone(),
             variables: self.variables.clone(),
         }
     }

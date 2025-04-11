@@ -216,11 +216,157 @@ impl BooleanExpression for Great {
     fn abs_evaluate(
         &self,
         state: &mut AbstractState<Self::Q>,
-        flag: bool,
+        _flag: bool,
     ) -> AbstractState<Self::Q> {
         if self.left.abs_evaluate(state).is_bottom() || self.right.abs_evaluate(state).is_bottom() {
             AbstractState::bottom(state);
         }
+        
+        // map( fn : AST -> BTree )
+        // if.map(fn){return fn(new If(fn(guard), fn(then), fn(else)));}
+        
+        // Bexpr =          (e)            <= 0
+        //          ArithmeticExpression
+        // evaluate
+        // const evaluate = (aExpr: ArithmeticExpression, aState: AbstractProgramState<T>): BinaryTree<T> => {
+
+        //     if (aExpr instanceof ArithmeticBinaryOperator) {
+        //         return new BinaryNode(
+        //             this.E(aExpr, aState).value,
+        //             evaluate(aExpr.leftOperand, this.E(aExpr, aState).state),
+        //             evaluate(aExpr.rightOperand, this.E(aExpr, aState).state),
+        //             aExpr.operator.value
+        //         )
+        //     }
+        //     if (aExpr instanceof ArithmeticUnaryOperator) {
+        //         return new UnaryNode(
+        //             this.E(aExpr, aState).value,
+        //             evaluate(aExpr.operand, this.E(aExpr, aState).state),
+        //         )
+        //     }
+        //     if (aExpr instanceof IncrementOperator || aExpr instanceof DecrementOperator) {
+        //         return new LeafNode(
+        //             this.E(aExpr, aState).value,
+        //         )
+        //     }
+        //     if (aExpr instanceof Variable) {
+        //         return new VariableNode(this.E(aExpr, aState).value, aExpr.name);
+        //     } else {
+        //         return new LeafNode(this.E(aExpr, aState).value)
+        //     }
+        // }
+
+        // Intersect : BackworkOperator.leq(Btree)
+
+        // Propagate:
+        // const propagate = (node: BinaryTree<T>): BinaryTree<T> => {
+        //     if (node instanceof VariableNode) {
+        //         return node;
+        //     } else if (node instanceof LeafNode) {
+        //         return node;
+        //     } else if (node instanceof UnaryNode) {
+        //         let ret = node.clone(node.data)
+        //         ret.child = propagate(node.child.clone(this.BackwardOperators.negate(node.child.data, node.data)));
+        //         return ret;
+        //     } else {
+        //         let aux;
+        //         let bNode = node as BinaryNode<T>;
+        //         switch ((bNode as BinaryNode<T>).operator) {
+        //             case "+":
+        //                 aux = this.BackwardOperators.add(bNode.left.data, bNode.right.data, bNode.data);
+        //                 break;
+        //             case "-":
+        //                 aux = this.BackwardOperators.subtract(bNode.left.data, bNode.right.data, bNode.data);
+        //                 break;
+        //             case "*":
+        //                 aux = this.BackwardOperators.multiply(bNode.left.data, bNode.right.data, bNode.data);
+        //                 break;
+        //             case "/":
+        //                 aux = this.BackwardOperators.divide(bNode.left.data, bNode.right.data, bNode.data);
+        //                 break;
+        //         };
+        //         let ret = bNode.clone(bNode.data);
+        //         ret.left = propagate(bNode.left.clone(aux?.x));
+        //         ret.right = propagate(bNode.right.clone(aux?.y));
+        //         return ret;
+        //     }
+        // }
+        
+        // BackwardOperators = {
+        //     leqZero: (x: Interval): Interval => {
+        //         return this.SetOperators.intersection(x, this._IntervalFactory.getLessThanOrEqual(0));
+        //     },
+        //     negate: (x: Interval, y: Interval): Interval => {
+        //         return this.SetOperators.intersection(x, this.Operators.negate(y));
+        //     },
+        //     add: (x: Interval, y: Interval, r: Interval): { x: Interval; y: Interval; } => {
+        //         return {
+        //             x: this.SetOperators.intersection(x, this.Operators.subtract(r, y)),
+        //             y: this.SetOperators.intersection(y, this.Operators.subtract(r, x)),
+        //         }
+        //     },
+        //     subtract: (x: Interval, y: Interval, r: Interval): { x: Interval; y: Interval; } => {
+        //         return {
+        //             x: this.SetOperators.intersection(x, this.Operators.add(r, y)),
+        //             y: this.SetOperators.intersection(y, this.Operators.subtract(x, r)),
+        //         }
+        //     },
+        //     multiply: (x: Interval, y: Interval, r: Interval): { x: Interval; y: Interval; } => {
+        //         return {
+        //             x: this.SetOperators.intersection(x, this.Operators.divide(r, y)),
+        //             y: this.SetOperators.intersection(y, this.Operators.divide(r, x)),
+        //         }
+        //     },
+        //     divide: (x: Interval, y: Interval, r: Interval): { x: Interval; y: Interval; } => {
+        //         let s = this.Operators.add(r, this._IntervalFactory.new(-1, 1));
+        //         return {
+        //             x: this.SetOperators.intersection(x, this.Operators.multiply(s, y)),
+        //             y: this.SetOperators.intersection(y, this.SetOperators.union(this.Operators.divide(x, s), this._IntervalFactory.new(0, 0))),
+        //         }
+        //     }
+        // };
+
+        // public Operators = {
+        //     negate: (x: Interval): Interval => {
+        //         return this.new(-x.upper, -x.lower)
+        //     },
+        //     add: (x: Interval, y: Interval): Interval => {
+        //         if (x.isBottom() || y.isBottom()) return this.Bottom;
+        //         const l = x.lower + y.lower;
+        //         const u = x.upper + y.upper;
+        //         return this.new(l, u);
+        //     },
+        //     subtract: (x: Interval, y: Interval): Interval => {
+        //         if (x.isBottom() || y.isBottom()) return this.Bottom;
+        //         const l = x.lower - y.upper;
+        //         const u = x.upper - y.lower;
+        //         return this.new(l, u);
+        //     },
+        //     multiply: (x: Interval, y: Interval): Interval => {
+        //         if (x.isBottom() || y.isBottom()) return this.Bottom;
+        //         const products: Array<number> = [
+        //             x.lower * y.lower, x.lower * y.upper,
+        //             x.upper * y.lower, x.upper * y.upper
+        //         ];
+        //         return this.new(Math.min(...products), Math.max(...products));
+        //     },
+        //     divide: (x: Interval, y: Interval): Interval => {
+        //         if (x.isBottom() || y.isBottom()) return this.Bottom;
+        //         if (1 <= y.lower) {
+        //             const l = Math.min(x.lower / y.lower, x.lower / y.upper);
+        //             const u = Math.max(x.upper / y.lower, x.upper / y.upper)
+        //             return this.new(l, u);
+        //         } else if (y.upper <= -1) {
+        //             const l = Math.min(x.upper / y.lower, x.upper / y.upper);
+        //             const u = Math.max(x.lower / y.lower, x.lower / y.upper);
+        //             return this.new(l, u);
+        //         } return this.union(
+        //             this.Operators.divide(x, this.intersect(y, this.getMoreThan(0))),
+        //             this.Operators.divide(x, this.intersect(y, this.getLessThan(0)))
+        //         )
+        //     }
+        // };
+
 
         // b - a + 1 <= 0
         let lhs = Box::new(Add {
