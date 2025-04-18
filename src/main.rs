@@ -47,7 +47,7 @@ pub fn take_bool() -> bool {
 }
 fn main() {
     //test file path
-    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/ifTest");
+    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/whiletest");
 
     //read from the file
     let contents = fs::read_to_string(program_file_path)
@@ -122,6 +122,8 @@ fn main() {
 }
 
 pub fn find_max(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
+      println!("inf search for value {} ", value);
+     println!("Vec content: {:?}", *vec);
     if let Some(max_val) = vec.iter()
                               .filter(|&&x| x <= value)
                               .cloned()

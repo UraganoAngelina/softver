@@ -29,7 +29,7 @@ impl Statement for Assign {
     }
 
     fn evaluate(&self, state: &mut State) -> State {
-        let value = self.expr.evaluate(state);
+        let value = self.expr.evaluate(&mut state.clone());
         state.insert(self.var_name.clone_box().to_string(), value);
         state.clone()
     }
@@ -143,7 +143,7 @@ impl Statement for IfThenElse {
             .abs_evaluate(&mut self.true_expr.abs_evaluate(state), false);
         let else_state = self
             .guard
-            .abs_evaluate(&mut self.false_expr.abs_evaluate(state), false);
+            .abs_evaluate(&mut self.false_expr.abs_evaluate(state), true);
         println!("then state {}", then_state);
         println!("else state {}", else_state);
         let final_state = AbstractState::state_lub(&then_state, &else_state);
@@ -179,7 +179,7 @@ impl Statement for While {
     }
 
     fn evaluate(&self, state: &mut State) -> State {
-        println!("WHILE INPUT STATE {:#?}", state);
+        println!("WHILE INPUT STATE {:?}", state);
         let mut prev_state: State;
         let mut current_state = state.clone();
         loop {
@@ -194,7 +194,7 @@ impl Statement for While {
         }
         //fix-point found now return the state
         state.extend(current_state.clone());
-        println!("state after while evaluation {:#?}", state);
+        println!("state after while evaluation {:?}", state);
         current_state
     }
 
@@ -301,7 +301,7 @@ impl Statement for For {
 
     //for loop evaluation
     fn evaluate(&self, state: &mut State) -> State {
-        println!("FOR INPUT STATE {:#?}", state);
+        println!("FOR INPUT STATE {:?}", state);
         let mut prev_state: State;
         let mut current_state = state.clone();
         current_state = self.init.evaluate(&mut current_state);
@@ -317,7 +317,7 @@ impl Statement for For {
             }
         }
         state.extend(current_state.clone());
-        println!("state after for evaluation {:#?}", state);
+        println!("state after for evaluation {:?}", state);
         current_state
     }
 
@@ -406,7 +406,7 @@ impl Statement for RepeatUntil {
 
     //Repeat until evaluation
     fn evaluate(&self, state: &mut State) -> State {
-        println!("REPEAT UNTIL INPUT STATE {:#?}", state);
+        println!("REPEAT UNTIL INPUT STATE {:?}", state);
         let mut prev_state: State;
         //One body executione guaranteed
         let mut current_state = self.body.evaluate(&mut state.clone());
@@ -420,7 +420,7 @@ impl Statement for RepeatUntil {
                 break;
             }
         }
-        println!("state after repeat until evaluation {:#?}", state);
+        println!("state after repeat until evaluation {:?}", state);
         current_state
     }
 

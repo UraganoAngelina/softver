@@ -1,1 +1,1 @@
-i:=0;x:=4;y:=1;z:=4;for(i:=0; i<=11; i++) {if x>5 then {x:=x+1;z:=z/2} else {y:=y+1}}
+i:=0;x:=6;y:=1;z:=4;for(i:=0; i<=11; i++) {if x>5 then {x:=x-1;z:=z/2} else {y:=y+1}}

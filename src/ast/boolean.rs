@@ -2,9 +2,12 @@ use crate::abstract_domain::AbstractDomainOps;
 use crate::ast::arithmetic::ArithmeticExpression;
 use crate::ast::State;
 use crate::{abstract_interval::AbstractInterval, abstract_state::AbstractState};
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 use super::arithmetic::{Add, Minus, Numeral};
+use crate::M;
+// use super::{BooleanAST, RelOp};
 
 pub trait BooleanExpression: Debug {
     type Q: AbstractDomainOps + PartialEq + Clone + Debug;
@@ -16,7 +19,6 @@ pub trait BooleanExpression: Debug {
         flag: bool,
     ) -> AbstractState<Self::Q>;
     fn to_string(&self) -> String;
-    // fn build_ast(&self , state: &mut AbstractState<Self::Q>) ->
 }
 
 #[derive(Debug)]
@@ -61,15 +63,17 @@ pub struct Equal {
 
 impl BooleanExpression for Equal {
     type Q = AbstractInterval;
+    fn evaluate(&self, state: &mut State) -> bool {
+        self.left.evaluate(state) == self.right.evaluate(state)
+    }
+
     fn clone_box(&self) -> Box<dyn BooleanExpression<Q = Self::Q>> {
         Box::new(Equal {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &mut State) -> bool {
-        self.left.evaluate(state) == self.right.evaluate(state)
-    }
+
     fn abs_evaluate(
         &self,
         state: &mut AbstractState<Self::Q>,
@@ -180,8 +184,9 @@ impl BooleanExpression for GreatEqual {
             AbstractState::bottom(state);
         }
 
-        // b - a  <= 0
-        let lhs = Box::new(Minus {
+       if ! flag{
+         // b - a  <= 0
+         let lhs = Box::new(Minus {
             left: self.right.clone_box(),
             right: self.left.clone_box(),
         });
@@ -192,6 +197,11 @@ impl BooleanExpression for GreatEqual {
             right: rhs,
         });
         canonical.abs_evaluate(state, flag)
+       }
+       else {
+           let lth = Box::new(Less{left: self.left.clone_box(), right: self.right.clone_box()});
+           lth.abs_evaluate(state, !flag)
+       }
     }
     fn to_string(&self) -> String {
         format!("{} >= {}", self.left.to_string(), self.right.to_string())
@@ -221,168 +231,32 @@ impl BooleanExpression for Great {
         if self.left.abs_evaluate(state).is_bottom() || self.right.abs_evaluate(state).is_bottom() {
             AbstractState::bottom(state);
         }
-        
-        // map( fn : AST -> BTree )
-        // if.map(fn){return fn(new If(fn(guard), fn(then), fn(else)));}
-        
-        // Bexpr =          (e)            <= 0
-        //          ArithmeticExpression
-        // evaluate
-        // const evaluate = (aExpr: ArithmeticExpression, aState: AbstractProgramState<T>): BinaryTree<T> => {
 
-        //     if (aExpr instanceof ArithmeticBinaryOperator) {
-        //         return new BinaryNode(
-        //             this.E(aExpr, aState).value,
-        //             evaluate(aExpr.leftOperand, this.E(aExpr, aState).state),
-        //             evaluate(aExpr.rightOperand, this.E(aExpr, aState).state),
-        //             aExpr.operator.value
-        //         )
-        //     }
-        //     if (aExpr instanceof ArithmeticUnaryOperator) {
-        //         return new UnaryNode(
-        //             this.E(aExpr, aState).value,
-        //             evaluate(aExpr.operand, this.E(aExpr, aState).state),
-        //         )
-        //     }
-        //     if (aExpr instanceof IncrementOperator || aExpr instanceof DecrementOperator) {
-        //         return new LeafNode(
-        //             this.E(aExpr, aState).value,
-        //         )
-        //     }
-        //     if (aExpr instanceof Variable) {
-        //         return new VariableNode(this.E(aExpr, aState).value, aExpr.name);
-        //     } else {
-        //         return new LeafNode(this.E(aExpr, aState).value)
-        //     }
-        // }
+        if !_flag {
+            // qui voglio che sia evaluato come un > in senso stretto e quindi trasformato in <=
+            let lhs = Box::new(Add {
+                left: Box::new(Minus {
+                    left: self.right.clone_box(),
+                    right: self.left.clone_box(),
+                }),
+                right: Box::new(Numeral(1)),
+            });
+            let rhs = Box::new(Numeral(0));
+            let canonical = Box::new(LessEqual {
+                left: lhs,
+                right: rhs,
+            });
 
-        // Intersect : BackworkOperator.leq(Btree)
-
-        // Propagate:
-        // const propagate = (node: BinaryTree<T>): BinaryTree<T> => {
-        //     if (node instanceof VariableNode) {
-        //         return node;
-        //     } else if (node instanceof LeafNode) {
-        //         return node;
-        //     } else if (node instanceof UnaryNode) {
-        //         let ret = node.clone(node.data)
-        //         ret.child = propagate(node.child.clone(this.BackwardOperators.negate(node.child.data, node.data)));
-        //         return ret;
-        //     } else {
-        //         let aux;
-        //         let bNode = node as BinaryNode<T>;
-        //         switch ((bNode as BinaryNode<T>).operator) {
-        //             case "+":
-        //                 aux = this.BackwardOperators.add(bNode.left.data, bNode.right.data, bNode.data);
-        //                 break;
-        //             case "-":
-        //                 aux = this.BackwardOperators.subtract(bNode.left.data, bNode.right.data, bNode.data);
-        //                 break;
-        //             case "*":
-        //                 aux = this.BackwardOperators.multiply(bNode.left.data, bNode.right.data, bNode.data);
-        //                 break;
-        //             case "/":
-        //                 aux = this.BackwardOperators.divide(bNode.left.data, bNode.right.data, bNode.data);
-        //                 break;
-        //         };
-        //         let ret = bNode.clone(bNode.data);
-        //         ret.left = propagate(bNode.left.clone(aux?.x));
-        //         ret.right = propagate(bNode.right.clone(aux?.y));
-        //         return ret;
-        //     }
-        // }
-        
-        // BackwardOperators = {
-        //     leqZero: (x: Interval): Interval => {
-        //         return this.SetOperators.intersection(x, this._IntervalFactory.getLessThanOrEqual(0));
-        //     },
-        //     negate: (x: Interval, y: Interval): Interval => {
-        //         return this.SetOperators.intersection(x, this.Operators.negate(y));
-        //     },
-        //     add: (x: Interval, y: Interval, r: Interval): { x: Interval; y: Interval; } => {
-        //         return {
-        //             x: this.SetOperators.intersection(x, this.Operators.subtract(r, y)),
-        //             y: this.SetOperators.intersection(y, this.Operators.subtract(r, x)),
-        //         }
-        //     },
-        //     subtract: (x: Interval, y: Interval, r: Interval): { x: Interval; y: Interval; } => {
-        //         return {
-        //             x: this.SetOperators.intersection(x, this.Operators.add(r, y)),
-        //             y: this.SetOperators.intersection(y, this.Operators.subtract(x, r)),
-        //         }
-        //     },
-        //     multiply: (x: Interval, y: Interval, r: Interval): { x: Interval; y: Interval; } => {
-        //         return {
-        //             x: this.SetOperators.intersection(x, this.Operators.divide(r, y)),
-        //             y: this.SetOperators.intersection(y, this.Operators.divide(r, x)),
-        //         }
-        //     },
-        //     divide: (x: Interval, y: Interval, r: Interval): { x: Interval; y: Interval; } => {
-        //         let s = this.Operators.add(r, this._IntervalFactory.new(-1, 1));
-        //         return {
-        //             x: this.SetOperators.intersection(x, this.Operators.multiply(s, y)),
-        //             y: this.SetOperators.intersection(y, this.SetOperators.union(this.Operators.divide(x, s), this._IntervalFactory.new(0, 0))),
-        //         }
-        //     }
-        // };
-
-        // public Operators = {
-        //     negate: (x: Interval): Interval => {
-        //         return this.new(-x.upper, -x.lower)
-        //     },
-        //     add: (x: Interval, y: Interval): Interval => {
-        //         if (x.isBottom() || y.isBottom()) return this.Bottom;
-        //         const l = x.lower + y.lower;
-        //         const u = x.upper + y.upper;
-        //         return this.new(l, u);
-        //     },
-        //     subtract: (x: Interval, y: Interval): Interval => {
-        //         if (x.isBottom() || y.isBottom()) return this.Bottom;
-        //         const l = x.lower - y.upper;
-        //         const u = x.upper - y.lower;
-        //         return this.new(l, u);
-        //     },
-        //     multiply: (x: Interval, y: Interval): Interval => {
-        //         if (x.isBottom() || y.isBottom()) return this.Bottom;
-        //         const products: Array<number> = [
-        //             x.lower * y.lower, x.lower * y.upper,
-        //             x.upper * y.lower, x.upper * y.upper
-        //         ];
-        //         return this.new(Math.min(...products), Math.max(...products));
-        //     },
-        //     divide: (x: Interval, y: Interval): Interval => {
-        //         if (x.isBottom() || y.isBottom()) return this.Bottom;
-        //         if (1 <= y.lower) {
-        //             const l = Math.min(x.lower / y.lower, x.lower / y.upper);
-        //             const u = Math.max(x.upper / y.lower, x.upper / y.upper)
-        //             return this.new(l, u);
-        //         } else if (y.upper <= -1) {
-        //             const l = Math.min(x.upper / y.lower, x.upper / y.upper);
-        //             const u = Math.max(x.lower / y.lower, x.lower / y.upper);
-        //             return this.new(l, u);
-        //         } return this.union(
-        //             this.Operators.divide(x, this.intersect(y, this.getMoreThan(0))),
-        //             this.Operators.divide(x, this.intersect(y, this.getLessThan(0)))
-        //         )
-        //     }
-        // };
-
-
-        // b - a + 1 <= 0
-        let lhs = Box::new(Add {
-            left: Box::new(Minus {
-                left: self.right.clone_box(),
-                right: self.left.clone_box(),
-            }),
-            right: Box::new(Numeral(1)),
-        });
-        let rhs = Box::new(Numeral(0));
-        let canonical = Box::new(LessEqual {
-            left: lhs,
-            right: rhs,
-        });
-
-        canonical.abs_evaluate(state, false)
+            canonical.abs_evaluate(state, false)
+        } else {
+            println!("great true flag");
+            // qui voglio che sia evaluato come un minore
+            let lth = Box::new(LessEqual {
+                left: self.left.clone_box(),
+                right: self.right.clone_box(),
+            });
+            lth.abs_evaluate(state, ! _flag)
+        }
     }
     fn to_string(&self) -> String {
         format!("{} > {}", self.left.to_string(), self.right.to_string())
@@ -431,10 +305,6 @@ impl BooleanExpression for LessEqual {
                 left_eval.to_string(),
                 right_eval.to_string()
             );
-            // let left_var = self.left.extract_variables();
-            //    for element in left_var {
-            //     state.update_interval(&element.value, left_eval);
-            //    }
 
             match (left_eval, right_eval) {
                 // Caso base: uno dei due è Bottom
@@ -505,8 +375,32 @@ impl BooleanExpression for LessEqual {
                             AbstractState::bottom(state)
                         }
                     } else {
-                        // Se il lato sinistro non è una variabile, ritorno lo stato iniziale
-                        state.clone()
+                        // Se il lato sinistro non è una variabile, eseguo il propagation algorithm
+                        // let tree = LessEqual::to_ast(&self, state);
+                        let m = *M.lock().expect("failed to lock m mutex");
+                        let mut var_leaves = HashMap::new();
+                        let tree = self.left.to_ast(state, &mut var_leaves);
+                        println!("printing arith tree");
+                        tree.pretty_print();
+                        let refinement = tree
+                            .get_value()
+                            .intersect(&AbstractInterval::Bounded { lower: m, upper: 0 });
+                        println!("refinement found {}", refinement);
+
+                        let sat = tree.backward_analysis(refinement);
+                        println!("sat result {}", sat);
+                        if !sat {
+                            return AbstractState::bottom(&state);
+                        }
+
+                        println!("after back analysis");
+                        tree.pretty_print();
+                        let new_state = state.clone();
+                        var_leaves.iter().for_each(|(var, node)| {
+                            state.update_interval(var, *node);
+                        });
+
+                        new_state
                     }
                 }
                 (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => {
@@ -551,15 +445,17 @@ pub struct Less {
 
 impl BooleanExpression for Less {
     type Q = AbstractInterval;
+    fn evaluate(&self, state: &mut State) -> bool {
+        self.left.evaluate(state) < self.right.evaluate(state)
+    }
+
     fn clone_box(&self) -> Box<dyn BooleanExpression<Q = Self::Q>> {
         Box::new(Less {
             left: self.left.clone_box(),
             right: self.right.clone_box(),
         })
     }
-    fn evaluate(&self, state: &mut State) -> bool {
-        self.left.evaluate(state) < self.right.evaluate(state)
-    }
+
     fn abs_evaluate(
         &self,
         state: &mut AbstractState<Self::Q>,
@@ -571,31 +467,37 @@ impl BooleanExpression for Less {
         // println!("Interpreting {:?}", self);
         // println!("In the abstract state {}", state);
         let zero_int = AbstractInterval::Bounded { lower: 0, upper: 0 };
-        if self.right.abs_evaluate(state) == zero_int {
-            let lhs = Box::new(Add {
-                left: self.left.clone_box(),
-                right: Box::new(Numeral(1)),
-            });
-            let rhs = Box::new(Numeral(0));
-            let canonical = Box::new(LessEqual {
-                left: lhs,
-                right: rhs,
-            });
-            canonical.abs_evaluate(state, flag)
-        } else {
-            let lhs = Box::new(Add {
-                left: Box::new(Minus {
+        if !flag {
+            if self.right.abs_evaluate(state) == zero_int {
+                let lhs = Box::new(Add {
                     left: self.left.clone_box(),
-                    right: self.right.clone_box(),
-                }),
-                right: Box::new(Numeral(1)),
-            });
-            let rhs = Box::new(Numeral(0));
-            let canonical = Box::new(LessEqual {
-                left: lhs,
-                right: rhs,
-            });
-            canonical.abs_evaluate(state, flag)
+                    right: Box::new(Numeral(1)),
+                });
+                let rhs = Box::new(Numeral(0));
+                let canonical = Box::new(LessEqual {
+                    left: lhs,
+                    right: rhs,
+                });
+                canonical.abs_evaluate(state, flag)
+            } else {
+                let lhs = Box::new(Add {
+                    left: Box::new(Minus {
+                        left: self.left.clone_box(),
+                        right: self.right.clone_box(),
+                    }),
+                    right: Box::new(Numeral(1)),
+                });
+                let rhs = Box::new(Numeral(0));
+                let canonical = Box::new(LessEqual {
+                    left: lhs,
+                    right: rhs,
+                });
+                canonical.abs_evaluate(state, flag)
+            }
+        }
+        else {
+            let geq = Box::new(GreatEqual{left: self.left.clone_box(), right: self.right.clone_box()});
+            geq.abs_evaluate(state, !flag)
         }
     }
     fn to_string(&self) -> String {
@@ -708,14 +610,16 @@ pub struct Not {
 
 impl BooleanExpression for Not {
     type Q = AbstractInterval;
+    fn evaluate(&self, state: &mut State) -> bool {
+        !(self.expression.evaluate(state))
+    }
+
     fn clone_box(&self) -> Box<dyn BooleanExpression<Q = Self::Q>> {
         Box::new(Not {
             expression: self.expression.clone_box(),
         })
     }
-    fn evaluate(&self, state: &mut State) -> bool {
-        !(self.expression.evaluate(state))
-    }
+
     fn abs_evaluate(
         &self,
         state: &mut AbstractState<Self::Q>,

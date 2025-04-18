@@ -5,6 +5,7 @@ use std::fmt::{self, Debug};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::abstract_domain::{AbstractDomainOps, AbstractValue, ConcreteValue};
+use crate::ast::Op;
 use crate::N;
 use crate::{find_max, find_min, CONSTANTS_VECTOR, M};
 
@@ -13,6 +14,16 @@ pub enum AbstractInterval {
     Bottom,                             // Stuck configuration
     Top,                                // Lack of information
     Bounded { lower: i64, upper: i64 }, // Regular Interval
+}
+
+impl Into<String> for AbstractInterval {
+    fn into(self) -> String {
+        match self {
+            AbstractInterval::Bottom => "Bottom".to_string(),
+            AbstractInterval::Top => "Top".to_string(),
+            AbstractInterval::Bounded { lower, upper } => format!("[{}, {}]", lower, upper),
+        }
+    }
 }
 
 impl AbstractDomainOps for AbstractInterval {
@@ -260,13 +271,20 @@ impl AbstractInterval {
                         upper: m_val,
                     }
                 } else {
-                    let new_lower = *l1.max(l2);
-                    let new_upper = *u1.min(u2);
-
-                    if new_lower <= new_upper {
-                        Self::Bounded {
-                            lower: new_lower,
-                            upper: new_upper,
+                    let max = *l1.max(l2);
+                    let min = *u1.min(u2);
+                    let new_upper: i64;
+                    let new_lower: i64;
+                    if max <= min {
+                        new_lower = *l1.max(l2);
+                        new_upper = *u1.min(u2);
+                        if new_lower <= new_upper {
+                            Self::Bounded {
+                                lower: new_lower,
+                                upper: new_upper,
+                            }
+                        } else {
+                            Self::Bottom
                         }
                     } else {
                         Self::Bottom
@@ -275,6 +293,50 @@ impl AbstractInterval {
             }
         }
     }
+    pub fn backward_unary_arithmetic_operator(operator: Op, rhs: Self,result:Self) ->[Self; 1]{
+        match operator {
+            Op::Uminus => {
+                let rhs_ref = rhs.intersect(&-result);
+                [rhs_ref]
+            }
+            _ => {unreachable!("unreachable code in backward unary operator")}
+        }
+    }
+    pub fn backward_arithmetic_operator(lhs: Self, rhs: Self, result: Self, operator: Op) -> [Self; 2] {
+        match operator {
+            Op::Add => {
+                let lhs_ref = lhs.intersect(&(result - rhs));
+                let rhs_ref = rhs.intersect(&(result - lhs));
+                [lhs_ref, rhs_ref]
+            }
+            Op::Sub => {
+                let lhs_ref = lhs.intersect(&(result + rhs));
+                let rhs_ref = rhs.intersect(&(lhs - result));
+                [lhs_ref, rhs_ref]
+            }
+            Op::Mul => {
+                let lhs_ref = lhs.intersect(&(result / rhs));
+                let rhs_ref = rhs.intersect(&(result / lhs));
+                [lhs_ref, rhs_ref]
+            }
+            Op::Div => {
+                let s = result
+                    + AbstractInterval::Bounded {
+                        lower: -1,
+                        upper: 1,
+                    };
+                let lhs_ref = lhs.intersect(&(s * rhs));
+                let rhs_ref =
+                    rhs.intersect(&(lhs / s).int_lub(&AbstractInterval::Bounded { lower: 0, upper: 0 }));
+                [lhs_ref, rhs_ref]
+            }
+            Op::Uminus => {
+              
+               unreachable!("error in backward arithmetic binary operator ");
+            }
+        }
+    }
+
     pub fn _is_top(&self) -> bool {
         let m = *M.lock().unwrap();
         let n = *N.lock().unwrap();
@@ -391,8 +453,7 @@ impl Add for AbstractInterval {
 
                     if new_upper == n && new_lower == m {
                         return Self::Top;
-                    }
-                    else {
+                    } else {
                         if new_lower > new_upper {
                             Self::Bounded {
                                 lower: new_upper,
@@ -476,6 +537,8 @@ impl Sub for AbstractInterval {
                     // let u2_pre = u2.clone();
                     let new_lower = checked_sub(l1, u2);
                     let new_upper = checked_sub(u1, l2);
+                    // let new_lower= l1-u2;
+                    // let new_upper = u1 - l2;
                     // println!("new upper in sub {}", new_upper);
                     // println!("new lower in sub {}", new_lower);
 

@@ -94,11 +94,11 @@ where
     // Least Upper Bound variable wise
     pub fn state_lub(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
         
-        let self_flag= self.is_bottom();
-        let other_flag = other.is_bottom();
-        println!("flags in lub {} {}", self_flag, other_flag);
+        // let self_flag= self.is_bottom();
+        // let other_flag = other.is_bottom();
+        // println!("flags in lub {} {}", self_flag, other_flag);
         if self.is_bottom() & other.is_bottom(){
-            println!("ohhh salve");
+            // println!("ohhh salve");
         }
         if self.is_bottom() {
             return other.clone();

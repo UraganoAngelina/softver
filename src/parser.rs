@@ -399,15 +399,15 @@ pub fn parse_bool_subexpression(
 
 pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
     while *index < tok_vec.nodes.len() {
-        println!("analyzed tokens {}", tok_vec.nodes[*index]);
+        // println!("analyzed tokens {}", tok_vec.nodes[*index]);
         // Controlla se il nodo attuale è un token
         if let Some(Any::Token(token)) = tok_vec.nodes.get(*index) {
             match token.token_ty {
                 TokenType::And => {
-                    println!("and found");
+                    // println!("and found");
                     let mut j = 0;
                     while j < tok_vec.nodes.len() {
-                        println!("{:?}", tok_vec.nodes[j]);
+                        // println!("{:?}", tok_vec.nodes[j]);
 
                         j = j + 1;
                     }
@@ -428,7 +428,7 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                     if *index >= tok_vec.nodes.len() {
                         unreachable!("Errore di parsing: operando destro mancante per l'and.");
                     }
-                    println!("and rhs {}", tok_vec.nodes[*index]);
+                    // println!("and rhs {}", tok_vec.nodes[*index]);
                     // Se trovi una parentesi aperta, esegui parse_bool_subexpression
                     let right = if let Some(node) = tok_vec.nodes.get(*index) {
                     
@@ -840,14 +840,14 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                             "Errore di parsing: operando sinistro mancante per l'op booleano >."
                         );
                     }
-                    println!("great found");
+                    // println!("great found");
                     let mut j = 0;
                     while j < tok_vec.nodes.len() {
-                        println!("{:?}", tok_vec.nodes[j]);
+                        // println!("{:?}", tok_vec.nodes[j]);
 
                         j = j + 1;
                     }
-                    println!("great lhs {}", tok_vec.nodes[*index - 1]);
+                    // println!("great lhs {}", tok_vec.nodes[*index - 1]);
                     let left_node = tok_vec.nodes.remove(*index - 1);
 
                     let left = match left_node {
@@ -861,14 +861,14 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                             "Errore di parsing: operando destro mancante per l'op booleano >."
                         );
                     }
-                    println!("printing vector after left remove");
-                    let mut j = 0;
-                    while j < tok_vec.nodes.len() {
-                        println!("{:?}", tok_vec.nodes[j]);
+                    // println!("printing vector after left remove");
+                   // let mut j = 0;
+                    // while j < tok_vec.nodes.len() {
+                    //     println!("{:?}", tok_vec.nodes[j]);
 
-                        j = j + 1;
-                    }
-                    println!("great rhs {}", tok_vec.nodes[*index]);
+                    //     j = j + 1;
+                    // }
+                    // println!("great rhs {}", tok_vec.nodes[*index]);
                     // Se trovi una parentesi aperta, esegui parse_arithmetic_subexpression
                     let right = if let Some(node) = tok_vec.nodes.get(*index) {
                         match node {
@@ -901,27 +901,27 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
 
                     // Crea l'oggetto Grea con left e right
                     let great_expr = Great { left, right };
-                    println!("expression extracted {:?}", great_expr);
-                    println!("printing the vector before insertion ");
-                    let mut j = 0;
-                    while j < tok_vec.nodes.len() {
-                        println!("{:?}", tok_vec.nodes[j]);
+                    // println!("expression extracted {:?}", great_expr);
+                    // println!("printing the vector before insertion ");
+                    // let mut j = 0;
+                    // while j < tok_vec.nodes.len() {
+                    //     // println!("{:?}", tok_vec.nodes[j]);
 
-                        j = j + 1;
-                    }
+                    //     j = j + 1;
+                    // }
                     // Reinserisci l'oggetto Less nel vettore come BooleanExpression
                     tok_vec
                         .nodes
                         .insert(*index - 1, Any::BooleanExpression(Box::new(great_expr)));
 
-                    println!("printing the vector after insertion ");
-                    let mut j = 0;
-                    while j < tok_vec.nodes.len() {
-                        println!("{:?}", tok_vec.nodes[j]);
+                    // println!("printing the vector after insertion ");
+                    // let mut j = 0;
+                    // while j < tok_vec.nodes.len() {
+                    //     println!("{:?}", tok_vec.nodes[j]);
 
-                        j = j + 1;
-                    }
-                    println!("deleting token {}", tok_vec.nodes[*index]);
+                    //     j = j + 1;
+                    // }
+                    // println!("deleting token {}", tok_vec.nodes[*index]);
                     //elimino il token contenente l'operatore <
                     tok_vec.nodes.remove(*index);
                     // *index -= 1;
@@ -2065,13 +2065,13 @@ pub fn analyze(program: String) {
     for token in tokenized_program.tokens {
         any_vec.push_token(token);
     }
-    println!("after lexing");
-    let mut j = 0;
-    while j < any_vec.nodes.len() {
-        println!("{:?}", any_vec.nodes[j]);
+    // println!("after lexing");
+    // let mut j = 0;
+    // while j < any_vec.nodes.len() {
+    //     println!("{:?}", any_vec.nodes[j]);
 
-        j = j + 1;
-    }
+    //     j = j + 1;
+    // }
 
     let mut index: usize;
     //----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2084,13 +2084,13 @@ pub fn analyze(program: String) {
     parse_arithmetic_unop(&mut any_vec, &mut index);
     index = 0;
     parse_bool_unop(&mut any_vec, &mut index);
-    println!("before bool parsing ");
-    let mut j = 0;
-    while j < any_vec.nodes.len() {
-        println!("{:?}", any_vec.nodes[j]);
+    // println!("before bool parsing ");
+    // let mut j = 0;
+    // while j < any_vec.nodes.len() {
+    //     println!("{:?}", any_vec.nodes[j]);
 
-        j = j + 1;
-    }
+    //     j = j + 1;
+    // }
     //arithmetic expressions
     index = 0;
     parse_arithmetic_expression(&mut any_vec, &mut index);
@@ -2098,13 +2098,13 @@ pub fn analyze(program: String) {
     parse_bool_expression(&mut any_vec, &mut index);
     index=0;
     parse_bool_expression(&mut any_vec, &mut index);
-    println!("bool parsed");
-    let mut j = 0;
-    while j < any_vec.nodes.len() {
-        println!("{:?}", any_vec.nodes[j]);
+    // println!("bool parsed");
+    // let mut j = 0;
+    // while j < any_vec.nodes.len() {
+    //     println!("{:?}", any_vec.nodes[j]);
 
-        j = j + 1;
-    }
+    //     j = j + 1;
+    // }
     index = 0;
     parse_assignment(&mut any_vec, &mut index);
     //statements
@@ -2137,7 +2137,7 @@ pub fn analyze(program: String) {
             if let Some(statement) = last_node.as_statement() {
                 let new_state = statement.evaluate(&mut state);
                 println!(
-                    "state printing after code evaluation {:#?}",
+                    "state printing after code evaluation {:?}",
                     new_state.clone()
                 );
             }
