@@ -47,7 +47,7 @@ pub fn take_bool() -> bool {
 }
 fn main() {
     //test file path
-    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/whiletest");
+    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/infiniteLoop");
 
     //read from the file
     let contents = fs::read_to_string(program_file_path)

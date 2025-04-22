@@ -158,7 +158,56 @@ impl AbstractInterval {
             }
         }
     }
-
+    pub fn get_low(i: AbstractInterval) -> i64 {
+        match i {
+            AbstractInterval::Bottom => unreachable!("tried to find lower of a bottom Interval"),
+            AbstractInterval::Top => unreachable!("tried to find lower of a top Interval"),
+            AbstractInterval::Bounded { lower, upper: _ } => lower,
+        }
+    }
+    pub fn get_upp(i: AbstractInterval) -> i64 {
+        match i {
+            AbstractInterval::Bottom => unreachable!("tried to find upper of a bottom Interval"),
+            AbstractInterval::Top => unreachable!("tried to find upper of a top Interval"),
+            AbstractInterval::Bounded { lower: _, upper } => upper,
+        }
+    }
+    pub fn div_non_zero(self, other: Self) -> Self {
+        if let (
+            Self::Bounded {
+                lower: l1,
+                upper: u1,
+            },
+            Self::Bounded {
+                lower: l2,
+                upper: u2,
+            },
+        ) = (self, other)
+        {
+            // calcola i quattro risultati
+            let ac = checked_div(l1, l2);
+            let ad = checked_div(l1, u2);
+            let bc = checked_div(u1, l2);
+            let bd = checked_div(u1, u2);
+            // se tutto ≥ 1
+            if l2 >= 1 {
+                Self::Bounded {
+                    lower: ac.min(ad),
+                    upper: bc.max(bd),
+                }
+            }
+            // se tutto ≤ -1
+            else {
+                Self::Bounded {
+                    lower: bc.min(bd),
+                    upper: ac.max(ad),
+                }
+            }
+        } else {
+            // non dovrebbe mai capitare; è solo per sicurezza
+            panic!("div_non_zero chiamato su intervallo non bounded o contenente zero");
+        }
+    }
     // Interval widening
     pub fn int_widening(&self, other: &Self) -> Self {
         match (self, other) {
@@ -293,16 +342,23 @@ impl AbstractInterval {
             }
         }
     }
-    pub fn backward_unary_arithmetic_operator(operator: Op, rhs: Self,result:Self) ->[Self; 1]{
+    pub fn backward_unary_arithmetic_operator(operator: Op, rhs: Self, result: Self) -> [Self; 1] {
         match operator {
             Op::Uminus => {
                 let rhs_ref = rhs.intersect(&-result);
                 [rhs_ref]
             }
-            _ => {unreachable!("unreachable code in backward unary operator")}
+            _ => {
+                unreachable!("unreachable code in backward unary operator")
+            }
         }
     }
-    pub fn backward_arithmetic_operator(lhs: Self, rhs: Self, result: Self, operator: Op) -> [Self; 2] {
+    pub fn backward_arithmetic_operator(
+        lhs: Self,
+        rhs: Self,
+        result: Self,
+        operator: Op,
+    ) -> [Self; 2] {
         match operator {
             Op::Add => {
                 let lhs_ref = lhs.intersect(&(result - rhs));
@@ -326,13 +382,13 @@ impl AbstractInterval {
                         upper: 1,
                     };
                 let lhs_ref = lhs.intersect(&(s * rhs));
-                let rhs_ref =
-                    rhs.intersect(&(lhs / s).int_lub(&AbstractInterval::Bounded { lower: 0, upper: 0 }));
+                let rhs_ref = rhs.intersect(
+                    &(lhs / s).int_lub(&AbstractInterval::Bounded { lower: 0, upper: 0 }),
+                );
                 [lhs_ref, rhs_ref]
             }
             Op::Uminus => {
-              
-               unreachable!("error in backward arithmetic binary operator ");
+                unreachable!("error in backward arithmetic binary operator ");
             }
         }
     }
@@ -719,32 +775,30 @@ impl Div for AbstractInterval {
                     if l2 == 0 && u2 == 0 {
                         return Self::Bottom; // [l,u] / [0,0] = ⊥ ✅
                     }
+                    let ab = Self::Bounded {
+                        lower: l1,
+                        upper: u1,
+                    };
+                    let cd = Self::Bounded {
+                        lower: l2,
+                        upper: u2,
+                    };
+                    let plus_inf = Self::new(1, n);
+                    let neg_inf = Self::new(m, -1);
 
-                    if l2 < 0 && u2 > 0 {
-                        return Self::Top; // [l,u] / [l',u'] con l' < 0 < u' = ⊤ ✅
+                    if u2 < 1 || l2 > -1 {
+                        return ab.div_non_zero(cd);
                     }
 
-                    let candidates = [
-                        checked_div(l1, l2),
-                        checked_div(l1, u2),
-                        checked_div(u1, l2),
-                        checked_div(u1, u2),
-                    ];
-                    let new_lower = candidates
-                        .iter()
-                        .filter_map(|&x| Some(x))
-                        .min()
-                        .unwrap_or(m);
-                    let new_upper = candidates
-                        .iter()
-                        .filter_map(|&x| Some(x))
-                        .max()
-                        .unwrap_or(n);
+                    let lhs = ab.clone().div_non_zero(cd.intersect(&plus_inf));
+                    let rhs = ab.div_non_zero(cd.intersect(&neg_inf));
 
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
+                    let low = AbstractInterval::get_low(lhs.int_lub(&rhs));
+                    let up = AbstractInterval::get_upp(lhs.int_lub(&rhs));
+                    return Self::Bounded {
+                        lower: low,
+                        upper: up,
+                    };
                 }
             }
         }
