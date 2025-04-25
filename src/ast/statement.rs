@@ -36,17 +36,17 @@ impl Statement for Assign {
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
         let mut new_state = state.clone();
         let value = self.expr.abs_evaluate(&mut new_state);
-        println!(
-            "assignment for variable {:?}  rhs {:?} evaluation {} in state {}",
-            self.var_name, self.expr, value, new_state
-        );
+        // println!(
+        //     "assignment for variable {:?}  rhs {:?} evaluation {} in state {}",
+        //     self.var_name, self.expr, value, new_state
+        // );
         state.variables.insert(
             self.var_name.as_variable().unwrap().to_string(),
             AbstractDomain::new(value),
         );
-        println!("state after assingment {}", state);
+        // println!("state after assingment {}", state);
         state.is_bottom = new_state.is_bottom;
-        println!("flag after assignment {}", state.is_bottom);
+        // println!("flag after assignment {}", state.is_bottom);
         state.clone()
     }
     fn to_string(&self) -> String {
@@ -137,20 +137,20 @@ impl Statement for IfThenElse {
     }
 
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
-        println!("if eval");
+        // println!("if eval");
         let then_state = self
             .guard
             .abs_evaluate(&mut self.true_expr.abs_evaluate(state), false);
         let else_state = self
             .guard
             .abs_evaluate(&mut self.false_expr.abs_evaluate(state), true);
-        println!("then state {}", then_state);
-        println!("else state {}", else_state);
+        // println!("then state {}", then_state);
+        // println!("else state {}", else_state);
         let final_state = AbstractState::state_lub(&then_state, &else_state);
-        println!("state lub {}", final_state);
+        // println!("state lub {}", final_state);
         state.is_bottom = final_state.is_bottom;
         state.variables.extend(final_state.variables.clone());
-        println!("REAL STATE AFTER IF {}", state);
+        // println!("REAL STATE AFTER IF {}", state);
         state.clone()
     }
     fn to_string(&self) -> String {
@@ -179,7 +179,7 @@ impl Statement for While {
     }
 
     fn evaluate(&self, state: &mut State) -> State {
-        println!("WHILE INPUT STATE {:?}", state);
+        // println!("WHILE INPUT STATE {:?}", state);
         let mut prev_state: State;
         let mut current_state = state.clone();
         loop {
@@ -194,7 +194,7 @@ impl Statement for While {
         }
         //fix-point found now return the state
         state.extend(current_state.clone());
-        println!("state after while evaluation {:?}", state);
+        // println!("state after while evaluation {:?}", state);
         current_state
     }
 
@@ -213,44 +213,25 @@ impl Statement for While {
         let mut current_state = state.clone();
         loop {
             _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
-            println!("guard result {}", _guard_result);
             _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-            println!("body result {}", _body_result);
             _body_result = _prev_state.state_lub(&_body_result.clone());
-            println!(" lub {}", _body_result);
             if *wid == true {
                 current_state = _prev_state.state_widening(&_body_result.clone());
             }
-            // Fixpoint check
-            println!(
-                "WIDENING prev state {}   current state {}",
-                _prev_state, current_state
-            );
             if current_state.clone() == _prev_state.clone() {
                 break;
             }
             _prev_state = current_state.clone();
         }
         let invariant = current_state.clone();
-        // invariant.is_bottom = current_state.is_bottom;
         println!("CYCLE INVARIANT: {}", invariant);
         _prev_state = invariant.clone();
         if *narrow == true {
             loop {
-                println!("NARROWING PHASE, current state {}", current_state);
                 _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), false);
-                println!("guard result {}", _guard_result);
                 _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-                println!("body result {}", _body_result);
-
                 _body_result = precondition.state_lub(&_body_result.clone());
-                println!("lub result {}", _body_result);
-
                 current_state = _prev_state.clone().state_narrowing(&_body_result.clone());
-                println!(
-                    "NARROWING prev state {}   current state {}",
-                    _prev_state, current_state
-                );
                 if current_state.clone() == _prev_state.clone() {
                     break;
                 }
@@ -258,13 +239,7 @@ impl Statement for While {
             }
         }
         // filtering with !guard
-        // println!("guard in while {}", self.guard.to_string());
         let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), true);
-        // if postcondition == precondition{
-        //     // println!("should I place bottom? ");
-        //     postcondition.is_bottom = true;
-        //     state.is_bottom= true;
-        // }
         state.variables.extend(postcondition.variables.clone());
 
         println!("CYCLE POSTCONDITION: {}", postcondition);
@@ -330,7 +305,7 @@ impl Statement for For {
             .expect("failed to read narrowing flag in for loop");
         let precondition = state.clone();
         println!("PRECONDITION {}", precondition);
-        println!("init component {}", self.init.to_string());
+        // println!("init component {}", self.init.to_string());
         self.init.abs_evaluate(&mut state.clone());
         let mut _guard_result = AbstractState::new();
         let mut _body_result = AbstractState::new();

@@ -93,11 +93,10 @@ where
     }
     // Least Upper Bound variable wise
     pub fn state_lub(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
-        
         // let self_flag= self.is_bottom();
         // let other_flag = other.is_bottom();
         // println!("flags in lub {} {}", self_flag, other_flag);
-        if self.is_bottom() & other.is_bottom(){
+        if self.is_bottom() & other.is_bottom() {
             // println!("ohhh salve");
         }
         if self.is_bottom() {
@@ -106,7 +105,6 @@ where
         if other.is_bottom() {
             return self.clone();
         }
-        
 
         let mut new_variables: HashMap<String, AbstractDomain<Q>> = HashMap::new();
 
@@ -135,19 +133,19 @@ where
         }
     }
     pub fn state_glb(&self, other: &AbstractState<Q>) -> AbstractState<Q> {
-        if self.is_bottom (){
+        if self.is_bottom() {
             return other.clone();
         }
-        if other.is_bottom (){
+        if other.is_bottom() {
             return self.clone();
         }
 
         let mut new_variables: HashMap<String, AbstractDomain<Q>> = HashMap::new();
 
-        // Doing the State Lub
+        // Doing the State glb
         for (key, left_domain) in &self.variables {
             if let Some(right_domain) = other.variables.get(key) {
-                // Interval Lub for every variable
+                // Interval glb for every variable
                 new_variables.insert(
                     key.clone(),
                     AbstractDomain::new(left_domain.glb(right_domain).value),
@@ -177,19 +175,6 @@ where
         if other.is_bottom() {
             return self.clone();
         }
-
-        // if self.is_top(){
-        //     return AbstractState{
-        //         is_bottom: false,
-        //         variables:
-        //     }
-        // }
-        // if self.is_top() || other.is_top() {
-        //     return AbstractState {
-        //         is_bottom: false,
-        //         variables: HashMap::new(),
-        //     };
-        // }
 
         let mut new_variables: HashMap<String, AbstractDomain<Q>> = HashMap::new();
 
@@ -274,49 +259,6 @@ where
         <AbstractInterval as AbstractDomainOps>::_alpha(r)
     }
 }
-
-impl<Q> fmt::Display for AbstractState<Q>
-where
-    Q: AbstractDomainOps
-        + Clone
-        + fmt::Display
-        + Copy
-        + Ord
-        + From<i64>
-        + num_traits::Zero
-        + fmt::Display,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // println!("state flag: {}", self.is_bottom );
-        if self.is_bottom {
-            let variables_str: Vec<String> = self
-                .variables
-                .iter()
-                .map(|(var, domain)| format!("{}: {}", var, domain))
-                .collect();
-            write!(f, "Bottom ⊥  {{{}}}", variables_str.join(", "))
-        } else {
-            let variables_str: Vec<String> = self
-                .variables
-                .iter()
-                .map(|(var, domain)| format!("{}: {}", var, domain))
-                .collect();
-            write!(f, "{{{}}}", variables_str.join(", "))
-        }
-    }
-}
-
-impl<Q> Clone for AbstractState<Q>
-where
-    Q: AbstractDomainOps + Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            is_bottom: self.is_bottom.clone(),
-            variables: self.variables.clone(),
-        }
-    }
-}
 // partial order implementation variable wise
 impl<Q: AbstractDomainOps + Clone + PartialOrd + PartialEq> PartialOrd for AbstractState<Q> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -362,6 +304,50 @@ impl<Q: AbstractDomainOps + Clone + PartialOrd + PartialEq> PartialOrd for Abstr
             Some(Ordering::Greater)
         } else {
             None
+        }
+    }
+}
+
+
+impl<Q> fmt::Display for AbstractState<Q>
+where
+    Q: AbstractDomainOps
+        + Clone
+        + fmt::Display
+        + Copy
+        + Ord
+        + From<i64>
+        + num_traits::Zero
+        + fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // println!("state flag: {}", self.is_bottom );
+        if self.is_bottom {
+            let variables_str: Vec<String> = self
+                .variables
+                .iter()
+                .map(|(var, domain)| format!("{}: {}", var, domain))
+                .collect();
+            write!(f, "Bottom ⊥  {{{}}}", variables_str.join(", "))
+        } else {
+            let variables_str: Vec<String> = self
+                .variables
+                .iter()
+                .map(|(var, domain)| format!("{}: {}", var, domain))
+                .collect();
+            write!(f, "{{{}}}", variables_str.join(", "))
+        }
+    }
+}
+
+impl<Q> Clone for AbstractState<Q>
+where
+    Q: AbstractDomainOps + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            is_bottom: self.is_bottom.clone(),
+            variables: self.variables.clone(),
         }
     }
 }

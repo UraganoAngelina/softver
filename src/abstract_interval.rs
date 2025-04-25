@@ -136,14 +136,14 @@ impl AbstractInterval {
             ) => {
                 let m = *M.lock().unwrap();
                 let n = *N.lock().unwrap();
-                if m == n {
-                    let new_lower = m;
-                    let new_upper = m;
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
-                } else {
+                // if m == n {
+                //     let new_lower = m;
+                //     let new_upper = m;
+                //     Self::Bounded {
+                //         lower: new_lower,
+                //         upper: new_upper,
+                //     }
+                // } else {
                     let new_lower = *l1.min(l2);
                     let new_upper = *u1.max(u2);
                     if new_lower <= new_upper {
@@ -154,7 +154,7 @@ impl AbstractInterval {
                     } else {
                         Self::Bottom
                     }
-                }
+                // }
             }
         }
     }
@@ -228,31 +228,23 @@ impl AbstractInterval {
                 let mut vec = CONSTANTS_VECTOR
                     .lock()
                     .expect("failed to lock constant vector");
-                if m == n {
-                    let new_lower = m;
-                    let new_upper = m;
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
-                } else {
-                    let new_lower = if l1 <= &l2 {
-                        *l1
-                    } else {
-                        //threshold research
-                        find_max(&mut vec, l2.clone())
-                    };
 
-                    let new_upper = if u1 >= &u2 {
-                        *u1
-                    } else {
-                        //threshold research
-                        find_min(&mut vec, u2.clone())
-                    };
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
+                let new_lower = if l1 <= &l2 {
+                    *l1
+                } else {
+                    //threshold research
+                    find_max(&mut vec, l2.clone())
+                };
+
+                let new_upper = if u1 >= &u2 {
+                    *u1
+                } else {
+                    //threshold research
+                    find_min(&mut vec, u2.clone())
+                };
+                Self::Bounded {
+                    lower: new_lower,
+                    upper: new_upper,
                 }
             }
         }
@@ -276,20 +268,12 @@ impl AbstractInterval {
                 //dovrei controllare il caso in cui il mio M sia == N
                 let m = *M.lock().unwrap();
                 let n = *N.lock().unwrap();
-                if m == n {
-                    let new_lower = m;
-                    let new_upper = m;
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
-                } else {
-                    let new_lower = if m >= *l1 { *l2 } else { *l1 };
-                    let new_upper = if n <= *u1 { *u2 } else { *u1 };
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
+
+                let new_lower = if m >= *l1 { *l2 } else { *l1 };
+                let new_upper = if n <= *u1 { *u2 } else { *u1 };
+                Self::Bounded {
+                    lower: new_lower,
+                    upper: new_upper,
                 }
             }
         }
@@ -485,14 +469,14 @@ impl Add for AbstractInterval {
             ) => {
                 let m = *M.lock().unwrap();
                 let n = *N.lock().unwrap();
-                if m == n {
-                    let new_lower = m;
-                    let new_upper = m;
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
-                } else {
+                // if m == n {
+                //     let new_lower = m;
+                //     let new_upper = m;
+                //     Self::Bounded {
+                //         lower: new_lower,
+                //         upper: new_upper,
+                //     }
+                // } else {
                     // let l1_pre = l1.clone();
                     // let l2_pre = l2.clone();
                     // let u1_pre = u1.clone();
@@ -522,7 +506,7 @@ impl Add for AbstractInterval {
                             }
                         }
                     }
-                }
+                // }
             }
         }
     }
@@ -577,14 +561,14 @@ impl Sub for AbstractInterval {
             ) => {
                 let m = *M.lock().unwrap();
                 let n = *N.lock().unwrap();
-                if m == n {
-                    let new_lower = m;
-                    let new_upper = m;
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
-                } else {
+                // if m == n {
+                //     let new_lower = m;
+                //     let new_upper = m;
+                //     Self::Bounded {
+                //         lower: new_lower,
+                //         upper: new_upper,
+                //     }
+                // } else {
                     // println!("normal form of analysis");
                     // [a,b] [c,d] = [a-d, b-c]
                     // let l1_pre = l1.clone();
@@ -625,7 +609,7 @@ impl Sub for AbstractInterval {
                             upper: new_upper,
                         }
                     }
-                }
+                // }
             }
         }
     }
@@ -679,14 +663,14 @@ impl Mul for AbstractInterval {
             ) => {
                 let m = *M.lock().unwrap();
                 let n = *N.lock().unwrap();
-                if m == n {
-                    let new_lower = m;
-                    let new_upper = m;
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
-                } else {
+                // if m == n {
+                //     let new_lower = m;
+                //     let new_upper = m;
+                //     Self::Bounded {
+                //         lower: new_lower,
+                //         upper: new_upper,
+                //     }
+                // } else {
                     let candidates = [
                         checked_mul(l1, l2),
                         checked_mul(l1, u2),
@@ -710,7 +694,7 @@ impl Mul for AbstractInterval {
                         lower: new_lower,
                         upper: new_upper,
                     }
-                }
+                // }
             }
         }
     }
@@ -751,9 +735,9 @@ impl Div for AbstractInterval {
     fn div(self, other: Self) -> Self::Output {
         let m = *M.lock().unwrap();
         let n = *N.lock().unwrap();
-        if m == n {
-            Self::Bounded { lower: m, upper: m }
-        } else {
+        // if m == n {
+        //     Self::Bounded { lower: m, upper: m }
+        // } else {
             match (self, other) {
                 (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom, // ⊥ / qualsiasi = ⊥
                 (Self::Top, Self::Top) => Self::Top,                   // ⊤ / ⊤ = ⊤
@@ -801,7 +785,7 @@ impl Div for AbstractInterval {
                     };
                 }
             }
-        }
+        // }
     }
 }
 fn checked_div(a: i64, b: i64) -> i64 {
@@ -833,19 +817,19 @@ impl Neg for AbstractInterval {
             AbstractInterval::Bounded { lower, upper } => {
                 let m = *M.lock().unwrap();
                 let n = *N.lock().unwrap();
-                if m == n {
-                    let new_lower = m;
-                    let new_upper = m;
-                    Self::Bounded {
-                        lower: new_lower,
-                        upper: new_upper,
-                    }
-                } else {
+                // if m == n {
+                //     let new_lower = m;
+                //     let new_upper = m;
+                //     Self::Bounded {
+                //         lower: new_lower,
+                //         upper: new_upper,
+                //     }
+                // } else {
                     AbstractInterval::Bounded {
                         lower: -upper,
                         upper: -lower,
                     }
-                }
+                // }
             }
         }
     }

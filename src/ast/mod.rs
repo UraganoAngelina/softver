@@ -81,46 +81,44 @@ impl Node {
     }
 
     pub fn pretty_print(&self) {
-        self.inner_pretty_print(
-            "".to_string(),
-            matches!(self, Node::Internal (
-                _,
-                 _,
-                 _,
-                 _
-            )),
-        );
+        self.inner_pretty_print("".to_string(), matches!(self, Node::Internal(_, _, _, _)));
     }
 
     pub fn backward_analysis(&self, refinement: AbstractInterval) -> bool {
-        match self{
+        match self {
             Node::Internal(op, mut abstract_interval, left, right) => {
                 abstract_interval = refinement;
 
-                let refinements = AbstractInterval::backward_arithmetic_operator(left.get_value(), right.get_value(), abstract_interval, op.clone());
+                let refinements = AbstractInterval::backward_arithmetic_operator(
+                    left.get_value(),
+                    right.get_value(),
+                    abstract_interval,
+                    op.clone(),
+                );
                 left.backward_analysis(refinements[0]) && right.backward_analysis(refinements[1])
             }
             Node::UInternal(op, mut abstract_interval, node) => {
                 abstract_interval = refinement;
 
-                let refinements = AbstractInterval::backward_unary_arithmetic_operator(op.clone(), node.get_value(), abstract_interval);
-               node.backward_analysis(refinements[0])
+                let refinements = AbstractInterval::backward_unary_arithmetic_operator(
+                    op.clone(),
+                    node.get_value(),
+                    abstract_interval,
+                );
+                node.backward_analysis(refinements[0])
             }
             Node::ConstantLeaf(abstract_interval) => {
                 refinement.intersect(abstract_interval) != AbstractInterval::Bottom
-
             }
             Node::VarLeaf(_, mut abstract_interval) => {
                 let value = refinement.intersect(&abstract_interval);
-                if value != AbstractInterval::Bottom{
+                if value != AbstractInterval::Bottom {
                     abstract_interval = refinement;
                 }
                 value != AbstractInterval::Bottom
             }
         }
     }
-
-    
 }
 
 // #[derive(Debug, Clone)]
@@ -128,7 +126,7 @@ impl Node {
 //     pub op: RelOp,
 //     pub value: AbstractInterval,
 //     pub child: Box<Node>,
-  
+
 // }
 // impl BooleanAST{
 //     pub fn pretty_print(&self)

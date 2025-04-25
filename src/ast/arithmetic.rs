@@ -156,7 +156,7 @@ impl ArithmeticExpression for Add {
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         let result =self.left.abs_evaluate(abs_state) + self.right.abs_evaluate(abs_state);
-        println!("add result {}", result);
+        // println!("add result {}", result);
         result
     }
     fn extract_variables(&self) -> Vec<&Variable> {
@@ -274,7 +274,7 @@ impl ArithmeticExpression for Minus {
         let lhs = self.left.abs_evaluate(abs_state);
         let rhs =self.right.abs_evaluate(abs_state);
         let result =lhs - rhs;
-        println!("{} - {} sub result {}",lhs, rhs, result);
+        // println!("{} - {} sub result {}",lhs, rhs, result);
         result
     }
     fn extract_variables(&self) -> Vec<&Variable> {

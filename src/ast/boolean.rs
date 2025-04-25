@@ -249,7 +249,7 @@ impl BooleanExpression for Great {
 
             canonical.abs_evaluate(state, false)
         } else {
-            println!("great true flag");
+           // println!("great true flag");
             // qui voglio che sia evaluato come un minore
             let lth = Box::new(LessEqual {
                 left: self.left.clone_box(),
@@ -286,12 +286,12 @@ impl BooleanExpression for LessEqual {
         flag: bool,
     ) -> AbstractState<Self::Q> {
         if !flag {
-            println!(
-                "less equal {} <= {} normal eval in state {}",
-                self.left.to_string(),
-                self.right.to_string(),
-                state
-            );
+            // println!(
+            //     "less equal {} <= {} normal eval in state {}",
+            //     self.left.to_string(),
+            //     self.right.to_string(),
+            //     state
+            // );
             if self.left.abs_evaluate(state).is_bottom()
                 || self.right.abs_evaluate(state).is_bottom()
             {
@@ -300,16 +300,16 @@ impl BooleanExpression for LessEqual {
 
             let left_eval = self.left.abs_evaluate(state);
             let right_eval = self.right.abs_evaluate(state);
-            println!(
-                "evaluation lhs: {} rhs:{}",
-                left_eval.to_string(),
-                right_eval.to_string()
-            );
+            // println!(
+            //     "evaluation lhs: {} rhs:{}",
+            //     left_eval.to_string(),
+            //     right_eval.to_string()
+            // );
 
             match (left_eval, right_eval) {
                 // Caso base: uno dei due è Bottom
                 (AbstractInterval::Bottom, _) | (_, AbstractInterval::Bottom) => {
-                    println!("bottom case of leq");
+                    // println!("bottom case of leq");
                     AbstractState::bottom(state)
                 }
 
@@ -344,13 +344,13 @@ impl BooleanExpression for LessEqual {
                                     upper: u1,
                                 },
                             );
-                            println!(" leq result {}", state.clone());
+                            // println!(" leq result {}", state.clone());
                             state.clone()
                         } else {
                             // Non soddisfatto: Bottom
 
                             state.update_interval(&left_var.value, AbstractInterval::Bottom);
-                            println!(" leq result {}", state.clone());
+                            // println!(" leq result {}", state.clone());
                             AbstractState::bottom(state)
                         }
                     } else if let (Some(left_var), Some(_right_num)) = (
@@ -366,61 +366,56 @@ impl BooleanExpression for LessEqual {
                                     upper: std::cmp::min(u1, u2),
                                 },
                             );
-                            println!(" leq result {}", state.clone());
+                            // println!(" leq result {}", state.clone());
                             state.clone()
                         } else {
                             // Non soddisfatto: Bottom
                             state.update_interval(&left_var.value, AbstractInterval::Bottom);
-                            println!(" leq result {}", state.clone());
+                            // println!(" leq result {}", state.clone());
                             AbstractState::bottom(state)
                         }
                     } else {
-                        // Se il lato sinistro non è una variabile, eseguo il propagation algorithm
-                        // let tree = LessEqual::to_ast(&self, state);
-                        let m = *M.lock().expect("failed to lock m mutex");
+                        // If the lhs is not a straight variable execute the propagation algorithm
+                        let m: i64 = *M.lock().expect("failed to lock m mutex");
                         let mut var_leaves = HashMap::new();
+                        // Build the AST representation of the test (canonical form lhs <=0)
                         let tree = self.left.to_ast(state, &mut var_leaves);
-                        println!("printing arith tree");
-                        tree.pretty_print();
+                        // Find the refinement intersecting with [-∞; 0]
                         let refinement = tree
                             .get_value()
                             .intersect(&AbstractInterval::Bounded { lower: m, upper: 0 });
-                        println!("refinement found {}", refinement);
-
+                        // Propagate the refinement found with the backward operators
                         let sat = tree.backward_analysis(refinement);
-                        println!("sat result {}", sat);
                         if !sat {
                             return AbstractState::bottom(&state);
                         }
-
-                        println!("after back analysis");
-                        tree.pretty_print();
-                        let new_state = state.clone();
+                        //Update the real state
                         var_leaves.iter().for_each(|(var, node)| {
                             state.update_interval(var, *node);
                         });
-
+                        
+                        let new_state = state.clone();
                         new_state
                     }
                 }
                 (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => {
-                    println!(" top case res{}", state.clone());
+                    // println!(" top case res{}", state.clone());
                     state.clone()
                 }
             }
         } else {
-            println!("filtering with !guard in leq in state {}", state);
+            // println!("filtering with !guard in leq in state {}", state);
             if self.left.abs_evaluate(state).is_bottom()
                 || self.right.abs_evaluate(state).is_bottom()
             {
-                println!(" bottom case in leq negated");
+                // println!(" bottom case in leq negated");
                 AbstractState::bottom(state);
             }
-            println!(
-                "lhs  rhs {} > {} in final filtering",
-                self.left.to_string(),
-                self.right.to_string()
-            );
+            // println!(
+            //     "lhs  rhs {} > {} in final filtering",
+            //     self.left.to_string(),
+            //     self.right.to_string()
+            // );
             if state.is_bottom() {
                 return AbstractState::bottom(&state);
             }
