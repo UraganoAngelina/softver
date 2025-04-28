@@ -40,6 +40,7 @@ impl Statement for Assign {
         //     "assignment for variable {:?}  rhs {:?} evaluation {} in state {}",
         //     self.var_name, self.expr, value, new_state
         // );
+        // 
         state.variables.insert(
             self.var_name.as_variable().unwrap().to_string(),
             AbstractDomain::new(value),
