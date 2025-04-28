@@ -21,11 +21,13 @@ pub enum TokenType {
     Less,       // '<'
     Greater,    // '>'
     GreatEqual, // '>='
+    NotEqual,
     Equal,      // '='
     And,        // '&&' 'and'
     Or,         // '||' 'or'
     Not,        // '!'
     PlusPlus,   // '++'
+    MinusMinus, // '--'
 
     // Parole chiave
     If,
@@ -49,6 +51,7 @@ pub enum TokenType {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct Token {
     pub value: String,
     pub token_ty: TokenType,
@@ -57,6 +60,9 @@ pub struct Token {
 impl Token {
     pub fn new(value: String, token: TokenType) -> Self {
         Token { value, token_ty: token }
+    }
+    pub fn to_string(& self) -> String {
+        format!("{}", self.value)
     }
 }
 
@@ -122,7 +128,12 @@ impl Lexer {
                 }
                 '-' => {
                     self.advance();
-                    Token::new("-".to_string(), TokenType::Minus)
+                    if let Some('-') = self.current_char(){
+                        self.advance();
+                        Token::new("--".to_string(), TokenType::MinusMinus)
+                    }else{
+                        Token::new("-".to_string(), TokenType::Minus)
+                    }
                 }
                 '*' => {
                     self.advance();
@@ -183,7 +194,13 @@ impl Lexer {
                 }
                 '!' => {
                     self.advance();
-                    Token::new("!".to_string(), TokenType::Not)
+                    if let Some('=') = self.current_char(){
+                        self.advance();
+                        Token::new("!=".to_string(), TokenType::NotEqual)
+                    }
+                    else {
+                        Token::new("!".to_string(), TokenType::Not)
+                    }
                 }
 
                 // Simboli
