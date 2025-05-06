@@ -1,0 +1,1 @@
+c:=0;repeat{c:=c+2}until(c>10)

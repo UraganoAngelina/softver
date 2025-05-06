@@ -431,7 +431,6 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                     // println!("and rhs {}", tok_vec.nodes[*index]);
                     // Se trovi una parentesi aperta, esegui parse_bool_subexpression
                     let right = if let Some(node) = tok_vec.nodes.get(*index) {
-                    
                         match node {
                             Any::Token(token) => {
                                 if let TokenType::Bra = token.token_ty {
@@ -862,7 +861,7 @@ pub fn parse_bool_expression(tok_vec: &mut AnyVec, index: &mut usize) {
                         );
                     }
                     // println!("printing vector after left remove");
-                   // let mut j = 0;
+                    // let mut j = 0;
                     // while j < tok_vec.nodes.len() {
                     //     println!("{:?}", tok_vec.nodes[j]);
 
@@ -1998,7 +1997,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                     if let Some(Any::Token(t)) = open_paren {
                         if t.token_ty != TokenType::CBra {
                             unreachable!(
-                                "Errore di parsing: attesa una parentesi aperta '(' dopo 'repeat-until'."
+                                "Errore di parsing: attesa una parentesi aperta '{{' dopo 'repeat-until'."
                             );
                         }
                     } else {
@@ -2010,6 +2009,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         Some(statement) => statement,
                         None => Box::new(Skip), // Se il body è vuoto, utilizza uno statement Skip come default
                     };
+                    
 
                     //match del token until
                     let until_token = any_vec.nodes.get(*index);
@@ -2026,7 +2026,25 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                             "Errore di parsing: atteso un token 'until' dopo il body del ciclo."
                         );
                     }
+                    let mut j = 0;
+                    while j < any_vec.nodes.len() {
+                        println!("{:?}", any_vec.nodes[j]);
 
+                        j = j + 1;
+                    }
+                    println!("trying to remove {:?}", any_vec.nodes.get(*index));
+                    let open_paren = any_vec.nodes.get(*index);
+                    if let Some(Any::Token(t)) = open_paren {
+                        if t.token_ty != TokenType::Bra {
+                            unreachable!(
+                                "Errore di parsing: attesa una parentesi aperta '(' dopo 'reèeat'."
+                            );
+                        } else {
+                            any_vec.nodes.remove(*index);
+                        }
+                    } else {
+                        unreachable!("Errore di parsing: atteso un token dopo 'repeat'.");
+                    }
                     //match della guardia dopo token until, che sia una BooleanExpression
                     let guard = match any_vec.nodes.get(*index) {
                         Some(Any::BooleanExpression(bexp)) => bexp.clone_box(),
@@ -2040,6 +2058,13 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         body_start_index,
                         Any::Statement(Box::new(repeat_until_statement)),
                     );
+                    let mut j = 0;
+                    while j < any_vec.nodes.len() {
+                        println!("{:?}", any_vec.nodes[j]);
+
+                        j = j + 1;
+                    }
+                    any_vec.nodes.remove(*index+1);
                 }
                 _ => {}
             }
@@ -2096,7 +2121,7 @@ pub fn analyze(program: String) {
     parse_arithmetic_expression(&mut any_vec, &mut index);
     index = 0;
     parse_bool_expression(&mut any_vec, &mut index);
-    index=0;
+    index = 0;
     parse_bool_expression(&mut any_vec, &mut index);
     // println!("bool parsed");
     // let mut j = 0;
@@ -2146,7 +2171,7 @@ pub fn analyze(program: String) {
         println!("STARTING ABSTRACT SEMANTICS ANALYSIS");
         if let Some(last_node) = any_vec.nodes.last() {
             if let Some(statement) = last_node.as_statement() {
-                let new_state= statement.abs_evaluate(&mut abs_state);
+                let new_state = statement.abs_evaluate(&mut abs_state);
                 println!("state printing after code evaluation {}", new_state.clone());
             }
         }
