@@ -196,10 +196,12 @@ impl BooleanExpression for GreatEqual {
             left: lhs,
             right: rhs,
         });
+        println!("evaluating {} flag {}", canonical.to_string(), flag);
         canonical.abs_evaluate(state, flag)
        }
        else {
            let lth = Box::new(Less{left: self.left.clone_box(), right: self.right.clone_box()});
+           println!("evaluating {} flag {}", lth.to_string(), flag);
            lth.abs_evaluate(state, !flag)
        }
     }
@@ -389,13 +391,16 @@ impl BooleanExpression for LessEqual {
                         if !sat {
                             return AbstractState::bottom(&state);
                         }
+                        // tree.pretty_print();
                         //Update the real state
                         var_leaves.iter().for_each(|(var, node)| {
                             state.update_interval(var, *node);
                         });
                         
                         let new_state = state.clone();
+                        // println!("new state {}" , new_state);
                         new_state
+
                     }
                 }
                 (AbstractInterval::Top, _) | (_, AbstractInterval::Top) => {
