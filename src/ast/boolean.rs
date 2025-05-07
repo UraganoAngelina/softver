@@ -19,6 +19,7 @@ pub trait BooleanExpression: Debug {
         flag: bool,
     ) -> AbstractState<Self::Q>;
     fn to_string(&self) -> String;
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>>;
 }
 
 #[derive(Debug)]
@@ -52,6 +53,14 @@ impl BooleanExpression for Boolean {
     }
     fn to_string(&self) -> String {
         self.0.to_string()
+    }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        if self.0 {
+            return Box::new(Boolean(false))
+        }
+        else {
+            return Box::new(Boolean(true))
+        }
     }
 }
 
@@ -103,6 +112,9 @@ impl BooleanExpression for Equal {
     }
     fn to_string(&self) -> String {
         format!("{} = {}", self.left.to_string(), self.right.to_string())
+    }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        return Box::new(NotEqual{left: self.left.clone_box(), right: self.right.clone_box()})
     }
 }
 #[derive(Debug)]
@@ -156,6 +168,9 @@ impl BooleanExpression for NotEqual {
     fn to_string(&self) -> String {
         format!("{} != {}", self.left.to_string(), self.right.to_string())
     }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        return Box::new(Equal{left: self.left.clone_box(), right: self.right.clone_box()})
+    }
 }
 
 #[derive(Debug)]
@@ -196,17 +211,20 @@ impl BooleanExpression for GreatEqual {
             left: lhs,
             right: rhs,
         });
-        println!("evaluating {} flag {}", canonical.to_string(), flag);
+        // println!("evaluating {} flag {}", canonical.to_string(), flag);
         canonical.abs_evaluate(state, flag)
        }
        else {
            let lth = Box::new(Less{left: self.left.clone_box(), right: self.right.clone_box()});
-           println!("evaluating {} flag {}", lth.to_string(), flag);
+        //    println!("evaluating {} flag {}", lth.to_string(), flag);
            lth.abs_evaluate(state, !flag)
        }
     }
     fn to_string(&self) -> String {
         format!("{} >= {}", self.left.to_string(), self.right.to_string())
+    }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        return Box::new(Less{left: self.left.clone_box(), right: self.right.clone_box()})
     }
 }
 #[derive(Debug)]
@@ -263,6 +281,9 @@ impl BooleanExpression for Great {
     fn to_string(&self) -> String {
         format!("{} > {}", self.left.to_string(), self.right.to_string())
     }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        return Box::new(LessEqual{left: self.left.clone_box(), right: self.right.clone_box()})
+    }
 }
 
 #[derive(Debug)]
@@ -288,12 +309,6 @@ impl BooleanExpression for LessEqual {
         flag: bool,
     ) -> AbstractState<Self::Q> {
         if !flag {
-            // println!(
-            //     "less equal {} <= {} normal eval in state {}",
-            //     self.left.to_string(),
-            //     self.right.to_string(),
-            //     state
-            // );
             if self.left.abs_evaluate(state).is_bottom()
                 || self.right.abs_evaluate(state).is_bottom()
             {
@@ -302,11 +317,6 @@ impl BooleanExpression for LessEqual {
 
             let left_eval = self.left.abs_evaluate(state);
             let right_eval = self.right.abs_evaluate(state);
-            // println!(
-            //     "evaluation lhs: {} rhs:{}",
-            //     left_eval.to_string(),
-            //     right_eval.to_string()
-            // );
 
             match (left_eval, right_eval) {
                 // Caso base: uno dei due è Bottom
@@ -416,11 +426,6 @@ impl BooleanExpression for LessEqual {
                 // println!(" bottom case in leq negated");
                 AbstractState::bottom(state);
             }
-            // println!(
-            //     "lhs  rhs {} > {} in final filtering",
-            //     self.left.to_string(),
-            //     self.right.to_string()
-            // );
             if state.is_bottom() {
                 return AbstractState::bottom(&state);
             }
@@ -434,6 +439,9 @@ impl BooleanExpression for LessEqual {
     }
     fn to_string(&self) -> String {
         format!("{} <= {}", self.left.to_string(), self.right.to_string())
+    }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        return Box::new(Great{left: self.left.clone_box(), right: self.right.clone_box()})
     }
 }
 
@@ -503,6 +511,9 @@ impl BooleanExpression for Less {
     fn to_string(&self) -> String {
         format!("{} < {}", self.left.to_string(), self.right.to_string())
     }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        return Box::new(GreatEqual{left: self.left.clone_box(), right: self.right.clone_box()})
+    }
 }
 
 #[derive(Debug)]
@@ -553,6 +564,9 @@ impl BooleanExpression for And {
     fn to_string(&self) -> String {
         format!("{} && {}", self.left.to_string(), self.right.to_string())
     }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        return Box::new(Or{left:self.left.clone_box(), right: self.right.clone_box()})
+    }
 }
 
 #[derive(Debug)]
@@ -601,6 +615,9 @@ impl BooleanExpression for Or {
     fn to_string(&self) -> String {
         format!("{} || {}", self.left.to_string(), self.right.to_string())
     }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+        return Box::new(And{left: self.left.clone_box(), right: self.right.clone_box()})
+    }
 }
 
 #[derive(Debug)]
@@ -635,5 +652,8 @@ impl BooleanExpression for Not {
 
     fn to_string(&self) -> String {
         format!("! {}", self.expression.to_string())
+    }
+    fn negate(&self) -> Box<dyn BooleanExpression<Q= Self::Q>> {
+      return self.expression.negate().negate()
     }
 }
