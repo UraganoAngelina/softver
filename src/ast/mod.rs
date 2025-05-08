@@ -41,7 +41,7 @@ impl Node {
         }
     }
 
-    fn inner_pretty_print(&self, indent: String, last: bool) {
+    fn _inner_pretty_print(&self, indent: String, last: bool) {
         let node_type = match self {
             Node::Internal(operator, _value, _left, _right) => match operator {
                 Op::Add => "+".to_string(),
@@ -73,15 +73,15 @@ impl Node {
 
         match self {
             Node::Internal(_, _, left, right) => {
-                left.inner_pretty_print(new_indent.clone(), false);
-                right.inner_pretty_print(new_indent, true);
+                left._inner_pretty_print(new_indent.clone(), false);
+                right._inner_pretty_print(new_indent, true);
             }
             _ => (),
         }
     }
 
-    pub fn pretty_print(&self) {
-        self.inner_pretty_print("".to_string(), matches!(self, Node::Internal(_, _, _, _)));
+    pub fn _pretty_print(&self) {
+        self._inner_pretty_print("".to_string(), matches!(self, Node::Internal(_, _, _, _)));
     }
 
     pub fn backward_analysis(&self, refinement: AbstractInterval) -> bool {
@@ -120,21 +120,3 @@ impl Node {
         }
     }
 }
-
-// #[derive(Debug, Clone)]
-// pub struct BooleanAST {
-//     pub op: RelOp,
-//     pub value: AbstractInterval,
-//     pub child: Box<Node>,
-
-// }
-// impl BooleanAST{
-//     pub fn pretty_print(&self)
-//     {
-//         match self.op {
-//             RelOp::LessEqual => "z=".to_string(),
-//             _ =>"other".to_string(),
-//         };
-//         self.child.pretty_print();
-//     }
-// }

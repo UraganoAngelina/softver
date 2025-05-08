@@ -401,51 +401,55 @@ impl Statement for RepeatUntil {
     }
 
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
-        let wid = WIDENING_FLAG
-            .lock()
-            .expect("failed to read widening flag in repeat until loop");
-        let narrow = NARROWING_FLAG
-            .lock()
-            .expect("failed to read narrowing flag in repeat until loop");
-        let precondition = state.clone();
-        println!("PRECONDITION {}", precondition);
-        let mut _guard_result = AbstractState::new();
-        let mut _body_result = AbstractState::new();
-        let mut prev_state = state.clone();
-        let mut current_state = self.body.abs_evaluate(&mut prev_state);
-        loop {
-            prev_state = current_state.clone();
-            _guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), true);
-            _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-            _body_result = prev_state.state_lub(&_body_result.clone());
-            if *wid == true {
-                current_state = prev_state.state_widening(&_body_result.clone());
-            }
-            //fixpoint check
-            if current_state == prev_state {
-                break;
-            }
-        }
-        println!("CYCLE INVARIANT: {}", current_state);
-        prev_state = current_state.clone();
-        if *narrow == true {
-            loop {
-                _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), true);
-                _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-                _body_result = precondition.state_lub(&_body_result.clone());
-                current_state = prev_state.state_narrowing(&_body_result.clone());
-                if current_state == prev_state {
-                    break;
-                }
-                prev_state = current_state.clone();
-            }
-        }
-        // filtering with !guard
-        let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), false);
-        state.is_bottom = postcondition.is_bottom;
-        state.variables.extend(postcondition.variables.clone());
-        println!("CYCLE POSTCONDITION: {}", postcondition);
-        state.clone()
+        // let wid = WIDENING_FLAG
+        //     .lock()
+        //     .expect("failed to read widening flag in repeat until loop");
+        // let narrow = NARROWING_FLAG
+        //     .lock()
+        //     .expect("failed to read narrowing flag in repeat until loop");
+        // let precondition = state.clone();
+        // println!("PRECONDITION {}", precondition);
+        // let mut _guard_result = AbstractState::new();
+        // let mut _body_result = AbstractState::new();
+        // let mut prev_state = state.clone();
+        // let mut current_state = self.body.abs_evaluate(&mut prev_state);
+        // loop {
+        //     prev_state = current_state.clone();
+        //     _guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), true);
+        //     _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
+        //     _body_result = prev_state.state_lub(&_body_result.clone());
+        //     if *wid == true {
+        //         current_state = prev_state.state_widening(&_body_result.clone());
+        //     }
+        //     //fixpoint check
+        //     if current_state == prev_state {
+        //         break;
+        //     }
+        // }
+        // println!("CYCLE INVARIANT: {}", current_state);
+        // prev_state = current_state.clone();
+        // if *narrow == true {
+        //     loop {
+        //         _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), true);
+        //         _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
+        //         _body_result = precondition.state_lub(&_body_result.clone());
+        //         current_state = prev_state.state_narrowing(&_body_result.clone());
+        //         if current_state == prev_state {
+        //             break;
+        //         }
+        //         prev_state = current_state.clone();
+        //     }
+        // }
+        // // filtering with !guard
+        // let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), false);
+        // state.is_bottom = postcondition.is_bottom;
+        // state.variables.extend(postcondition.variables.clone());
+        // println!("CYCLE POSTCONDITION: {}", postcondition);
+        // state.clone()
+        let neg_guard = self.guard.negate();
+        let while_obj = Box::new(While{guard: neg_guard, body: self.body.clone_box()});
+        let conc = Box::new(Concat{first: self.body.clone_box(), second: while_obj});
+        conc.abs_evaluate(state)
     }
 
     fn to_string(&self) -> String {

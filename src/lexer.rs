@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-
 #[derive(Debug)]
 #[derive(PartialEq)]
 #[derive(Clone)]

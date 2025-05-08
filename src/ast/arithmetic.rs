@@ -2,7 +2,6 @@ use crate::abstract_domain::{AbstractDomain, AbstractDomainOps};
 use crate::abstract_interval::AbstractInterval;
 use crate::abstract_state::AbstractState;
 use crate::ast::State;
-use crate::CONSTANTS_VECTOR;
 use crate::{M, N};
 use std::any::Any;
 use std::collections::HashMap;
@@ -20,7 +19,11 @@ pub trait ArithmeticExpression: Debug {
     fn to_string(&self) -> String;
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval;
     fn extract_variables(&self) -> Vec<&Variable>;
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q>, var_leaves: &mut HashMap<String,AbstractInterval >) -> Node;
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node;
 }
 
 #[derive(Debug)]
@@ -28,7 +31,11 @@ pub struct Numeral(pub i64);
 
 impl ArithmeticExpression for Numeral {
     type Q = AbstractInterval;
-    fn to_ast(&self, _abs_state: &mut AbstractState<Self::Q>, _var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        _abs_state: &mut AbstractState<Self::Q>,
+        _var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         // Creo un nodo Internal con operatore Sub e due sotto-nodi
         Node::ConstantLeaf(AbstractInterval::Bounded {
             lower: self.0,
@@ -51,13 +58,6 @@ impl ArithmeticExpression for Numeral {
         self.0.to_string()
     }
     fn abs_evaluate(&self, _abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
-        let mut constant = CONSTANTS_VECTOR
-            .lock()
-            .expect("FAILED TO LOCK THE CONSTANT VECTOR");
-        //put the constant in the dedicated vector for threshold widening
-        if ! constant.contains(&self.0){
-            constant.push(self.0.clone());
-        }
         //return a constant interval
         AbstractInterval::new(self.0, self.0)
     }
@@ -73,7 +73,11 @@ pub struct Variable {
 
 impl ArithmeticExpression for Variable {
     type Q = AbstractInterval;
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q> , var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         let value = self.abs_evaluate(abs_state);
         var_leaves.insert(self.value.clone(), value);
         Node::VarLeaf(self.value.clone(), value)
@@ -127,12 +131,16 @@ pub struct Add {
 
 impl ArithmeticExpression for Add {
     type Q = AbstractInterval;
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q>, var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         // Creo un nodo Internal con operatore Sub e due sotto-nodi
         Node::Internal(
             Op::Add,
             self.abs_evaluate(abs_state),
-            Box::new(self.left.to_ast(abs_state , var_leaves)),
+            Box::new(self.left.to_ast(abs_state, var_leaves)),
             Box::new(self.right.to_ast(abs_state, var_leaves)),
         )
     }
@@ -155,7 +163,7 @@ impl ArithmeticExpression for Add {
         format!("({} + {})", self.left.to_string(), self.right.to_string())
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
-        let result =self.left.abs_evaluate(abs_state) + self.right.abs_evaluate(abs_state);
+        let result = self.left.abs_evaluate(abs_state) + self.right.abs_evaluate(abs_state);
         // println!("add result {}", result);
         result
     }
@@ -186,7 +194,11 @@ pub struct Product {
 
 impl ArithmeticExpression for Product {
     type Q = AbstractInterval;
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q> , var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         // Creo un nodo Internal con operatore Sub e due sotto-nodi
         Node::Internal(
             Op::Mul,
@@ -243,7 +255,11 @@ pub struct Minus {
 
 impl ArithmeticExpression for Minus {
     type Q = AbstractInterval;
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q>, var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         // Creo un nodo Internal con operatore Sub e due sotto-nodi
         Node::Internal(
             Op::Sub,
@@ -272,8 +288,8 @@ impl ArithmeticExpression for Minus {
     }
     fn abs_evaluate(&self, abs_state: &mut AbstractState<Self::Q>) -> AbstractInterval {
         let lhs = self.left.abs_evaluate(abs_state);
-        let rhs =self.right.abs_evaluate(abs_state);
-        let result =lhs - rhs;
+        let rhs = self.right.abs_evaluate(abs_state);
+        let result = lhs - rhs;
         // println!("{} - {} sub result {}",lhs, rhs, result);
         result
     }
@@ -302,7 +318,11 @@ pub struct Uminus {
 }
 impl ArithmeticExpression for Uminus {
     type Q = AbstractInterval;
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q>, var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         let sub_tree = Box::new(self.right.to_ast(abs_state, var_leaves));
         Node::UInternal(Op::Uminus, -self.abs_evaluate(abs_state), sub_tree)
     }
@@ -346,7 +366,11 @@ pub struct Divide {
 }
 impl ArithmeticExpression for Divide {
     type Q = AbstractInterval;
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q>, var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         Node::Internal(
             Op::Div,
             self.abs_evaluate(abs_state),
@@ -410,7 +434,11 @@ pub struct PlusPlus {
     pub var: Box<dyn ArithmeticExpression<Q = AbstractInterval>>,
 }
 impl ArithmeticExpression for PlusPlus {
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q>, var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         Node::Internal(
             Op::Add,
             self.abs_evaluate(abs_state),
@@ -498,11 +526,15 @@ pub struct MinusMinus {
 }
 impl ArithmeticExpression for MinusMinus {
     type Q = AbstractInterval;
-    fn to_ast(&self, abs_state: &mut AbstractState<Self::Q>, var_leaves : &mut HashMap<String, AbstractInterval>) -> Node {
+    fn to_ast(
+        &self,
+        abs_state: &mut AbstractState<Self::Q>,
+        var_leaves: &mut HashMap<String, AbstractInterval>,
+    ) -> Node {
         Node::Internal(
             Op::Sub,
             self.abs_evaluate(abs_state),
-            Box::new(self.var.to_ast(abs_state, var_leaves) ),
+            Box::new(self.var.to_ast(abs_state, var_leaves)),
             Box::new((Numeral(1)).to_ast(abs_state, var_leaves)),
         )
     }
