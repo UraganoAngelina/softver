@@ -46,7 +46,7 @@ pub fn take_bool() -> bool {
 }
 fn main() {
     //test file path
-    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/ifTest");
+    let program_file_path = Path::new("/home/alberto/Desktop/soft2ver/soft2ver/src/test/factorial");
 
     //read from the file
     let contents = fs::read_to_string(program_file_path)
@@ -123,7 +123,6 @@ fn main() {
 pub fn find_max(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
     let m = M.lock().unwrap();
     let n = N.lock().unwrap();
-
     if value != *m && value != *n {
         if let Some(max_val) = vec.iter().filter(|&&x| x < value).cloned().max() {
             max_val
@@ -138,7 +137,6 @@ pub fn find_max(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
 pub fn find_min(vec: &mut MutexGuard<'_, Vec<i64>>, value: i64) -> i64 {
     let m = M.lock().unwrap();
     let n = N.lock().unwrap();
-
     if value != *m && value != *n {
         // Cerca il massimo valore minore o uguale a value
         if let Some(max_val) = vec.iter().filter(|&&x| x > value).cloned().min() {

@@ -3,6 +3,7 @@ use crate::ast::{arithmetic::*, boolean::*, statement::*, State};
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::lexer::TokenType;
+use crate::CONSTANTS_VECTOR;
 use crate::{abstract_state, ANALYSIS_FLAG};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -171,10 +172,15 @@ pub fn parse_lit(tok_vec: &mut AnyVec, index: &mut usize) {
     match &tok_vec.nodes[*index] {
         Any::Token(token) => match token.token_ty {
             TokenType::Number(value) => {
+                let mut constant = CONSTANTS_VECTOR
+                    .lock()
+                    .expect("FAILED TO LOCK THE CONSTANT VECTOR");
                 // Crea un Numeral e sostituisci il Token con un ArithmeticExpression
                 let numeral = Numeral(value);
                 let arithmetic_expr = Any::from_arithmetic_expr(Box::new(numeral));
-
+                if ! constant.contains(&value){
+                    constant.push(value.clone());
+                }
                 // Sostituisce il token corrente con l'espressione aritmetica
                 tok_vec.nodes[*index] = arithmetic_expr;
             }
@@ -2009,7 +2015,6 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
                         Some(statement) => statement,
                         None => Box::new(Skip), // Se il body è vuoto, utilizza uno statement Skip come default
                     };
-                    
 
                     //match del token until
                     let until_token = any_vec.nodes.get(*index);
@@ -2064,7 +2069,7 @@ pub fn parse_statement(any_vec: &mut AnyVec, index: &mut usize) {
 
                         j = j + 1;
                     }
-                    any_vec.nodes.remove(*index+1);
+                    any_vec.nodes.remove(*index + 1);
                 }
                 _ => {}
             }
