@@ -36,11 +36,7 @@ impl Statement for Assign {
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
         let mut new_state = state.clone();
         let value = self.expr.abs_evaluate(&mut new_state);
-        // println!(
-        //     "assignment for variable {:?}  rhs {:?} evaluation {} in state {}",
-        //     self.var_name, self.expr, value, new_state
-        // );
-        
+
         state.variables.insert(
             self.var_name.as_variable().unwrap().to_string(),
             AbstractDomain::new(value),
@@ -185,10 +181,14 @@ impl Statement for While {
         let mut current_state = state.clone();
         loop {
             prev_state = current_state.clone();
-            if self.guard.evaluate(&mut current_state) {
-                current_state = self.body.evaluate(&mut current_state);
-            } else {
-            }
+
+            let ifstmt = Box::new(IfThenElse {
+                guard: self.guard.clone_box(),
+                true_expr: self.body.clone_box(),
+                false_expr: Box::new(Skip),
+            });
+            current_state = ifstmt.evaluate(&mut prev_state);
+
             if current_state == prev_state {
                 break;
             }
@@ -260,7 +260,7 @@ impl Statement for While {
 pub struct For {
     pub init: Box<dyn Statement<Q = AbstractInterval>>,
     pub guard: Box<dyn BooleanExpression<Q = AbstractInterval>>,
-    pub increment: Box<dyn ArithmeticExpression<Q = AbstractInterval>>,
+    pub increment: Box<dyn Statement<Q = AbstractInterval>>,
     pub body: Box<dyn Statement<Q = AbstractInterval>>,
 }
 
@@ -279,21 +279,28 @@ impl Statement for For {
     fn evaluate(&self, state: &mut State) -> State {
         println!("FOR INPUT STATE {:?}", state);
         let mut prev_state: State;
-        let mut current_state = state.clone();
-        current_state = self.init.evaluate(&mut current_state);
+        let mut current_state = self.init.evaluate(state);
+
         loop {
             prev_state = current_state.clone();
-            if self.guard.evaluate(&mut current_state) {
-                current_state = self.body.evaluate(&mut current_state);
-                let _ = self.increment.evaluate(&mut current_state);
-            } else {
-            }
+
+            let ifstmt = Box::new(IfThenElse {
+                guard: self.guard.clone_box(),
+                true_expr: Box::new(Concat {
+                    first: self.body.clone_box(),
+                    second: self.increment.clone_box(),
+                }),
+                false_expr: Box::new(Skip),
+            });
+            current_state = ifstmt.evaluate(&mut prev_state);
+
             if current_state == prev_state {
                 break;
             }
         }
+        //fix-point found now return the state
         state.extend(current_state.clone());
-        println!("state after for evaluation {:?}", state);
+        // println!("state after for evaluation {:?}", state);
         current_state
     }
 
@@ -312,7 +319,7 @@ impl Statement for For {
         let mut _body_result = AbstractState::new();
         let mut _prev_state = state.clone();
         let mut current_state = state.clone();
-        let mut _increment_result = AbstractInterval::new(0 as i64, 0 as i64);
+        let mut _increment_result = AbstractState::new();
         loop {
             _guard_result = self.guard.abs_evaluate(&mut _prev_state.clone(), false);
 
@@ -388,67 +395,34 @@ impl Statement for RepeatUntil {
         let mut current_state = self.body.evaluate(&mut state.clone());
         loop {
             prev_state = current_state.clone();
-            if !self.guard.evaluate(&mut current_state) {
-                current_state = self.body.evaluate(&mut current_state);
-            } else {
-            }
+
+            let ifstmt = Box::new(IfThenElse {
+                guard: self.guard.clone_box(),
+                true_expr: Box::new(Skip),
+                false_expr: self.body.clone_box(),
+            });
+            current_state = ifstmt.evaluate(&mut prev_state);
+
             if current_state == prev_state {
                 break;
             }
         }
-        println!("state after repeat until evaluation {:?}", state);
+        //fix-point found now return the state
+        state.extend(current_state.clone());
+        // println!("state after repeat until evaluation {:?}", state);
         current_state
     }
 
     fn abs_evaluate(&self, state: &mut AbstractState<Self::Q>) -> AbstractState<Self::Q> {
-        // let wid = WIDENING_FLAG
-        //     .lock()
-        //     .expect("failed to read widening flag in repeat until loop");
-        // let narrow = NARROWING_FLAG
-        //     .lock()
-        //     .expect("failed to read narrowing flag in repeat until loop");
-        // let precondition = state.clone();
-        // println!("PRECONDITION {}", precondition);
-        // let mut _guard_result = AbstractState::new();
-        // let mut _body_result = AbstractState::new();
-        // let mut prev_state = state.clone();
-        // let mut current_state = self.body.abs_evaluate(&mut prev_state);
-        // loop {
-        //     prev_state = current_state.clone();
-        //     _guard_result = self.guard.abs_evaluate(&mut prev_state.clone(), true);
-        //     _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-        //     _body_result = prev_state.state_lub(&_body_result.clone());
-        //     if *wid == true {
-        //         current_state = prev_state.state_widening(&_body_result.clone());
-        //     }
-        //     //fixpoint check
-        //     if current_state == prev_state {
-        //         break;
-        //     }
-        // }
-        // println!("CYCLE INVARIANT: {}", current_state);
-        // prev_state = current_state.clone();
-        // if *narrow == true {
-        //     loop {
-        //         _guard_result = self.guard.abs_evaluate(&mut current_state.clone(), true);
-        //         _body_result = self.body.abs_evaluate(&mut _guard_result.clone());
-        //         _body_result = precondition.state_lub(&_body_result.clone());
-        //         current_state = prev_state.state_narrowing(&_body_result.clone());
-        //         if current_state == prev_state {
-        //             break;
-        //         }
-        //         prev_state = current_state.clone();
-        //     }
-        // }
-        // // filtering with !guard
-        // let postcondition = self.guard.abs_evaluate(&mut current_state.clone(), false);
-        // state.is_bottom = postcondition.is_bottom;
-        // state.variables.extend(postcondition.variables.clone());
-        // println!("CYCLE POSTCONDITION: {}", postcondition);
-        // state.clone()
         let neg_guard = self.guard.negate();
-        let while_obj = Box::new(While{guard: neg_guard, body: self.body.clone_box()});
-        let conc = Box::new(Concat{first: self.body.clone_box(), second: while_obj});
+        let while_obj = Box::new(While {
+            guard: neg_guard,
+            body: self.body.clone_box(),
+        });
+        let conc = Box::new(Concat {
+            first: self.body.clone_box(),
+            second: while_obj,
+        });
         conc.abs_evaluate(state)
     }
 
